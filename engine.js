@@ -175,11 +175,14 @@ const HebrewEngine = (function () {
     return (d >= 1 && d <= 49) ? d : null;
   }
 
+  // Yiddish day-of-week names (index matches JS Date.getDay(): 0=Sunday..6=Saturday)
+  const YIDDISH_DAYS = ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת'];
+
   // ---------- Public API ----------
   return {
     isLeapYear, gregorianToJDN, jdnToGregorian, jdnToHebrew, hebrewToJdn,
     hebrewNumeral, hebrewYearString, getHolidays, getHolidayForJdn, getOmerDay,
-    JDN0
+    YIDDISH_DAYS, JDN0
   };
 })();
 
@@ -244,6 +247,7 @@ const ZmanimEngine = (function () {
     opts = opts || {};
     const candleMin = opts.candleLightingMinutes != null ? opts.candleLightingMinutes : 18;
     const havdalahMin = opts.havdalahMinutes != null ? opts.havdalahMinutes : 72;
+    const tzeitMin = opts.tzeitMinutes != null ? opts.tzeitMinutes : 45;
     // build a UTC "noon of this local calendar day" reference so solar calc lands on the right day
     const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
     const refUTC = new Date(Date.UTC(y, m, d, 17, 0, 0)); // ~noon EST/EDT in UTC, close enough for day selection
@@ -281,6 +285,7 @@ const ZmanimEngine = (function () {
       shkiah: fmt(sunsetMin),
       candleLighting: fmt(sunsetMin - candleMin),
       havdalah: fmt(sunsetMin + havdalahMin),
+      tzeitHakochavim: fmt(sunsetMin + tzeitMin),
       _raw: { sunriseMin, sunsetMin, tzOffsetHours }
     };
   }
