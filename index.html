@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zman & Luach">
+<title>Zman &amp; Luach — Kiryas Joel</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#f7f5ef;
+    --fg:#101010;
+    --fg-soft:#3a3a3a;
+    --accent:#173d6b;
+    --line:#c9c4b6;
+    --panel:#ffffff;
+    --shabbat:#173d6b;
+    --banner-bg:#101010;
+    --banner-fg:#f7f5ef;
+  }
+  [data-theme="night"]{
+    --bg:#05070a;
+    --fg:#f1ece0;
+    --fg-soft:#c9c2b0;
+    --accent:#e7d9a8;
+    --line:#3a3f47;
+    --panel:#0d1117;
+    --banner-bg:#e7d9a8;
+    --banner-fg:#05070a;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); color:var(--fg);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  #app{
+    height:100vh; height:100dvh;
+    width:100vw;
+    display:flex; flex-direction:column;
+    padding: 2vh 3vw;
+    gap: 1.4vh;
+  }
+
+  /* ---------- Holiday / Shabbat banner ---------- */
+  #banner{
+    display:none;
+    background:var(--banner-bg); color:var(--banner-fg);
+    text-align:center;
+    padding: 1.2vh 1vw;
+    border-radius: 14px;
+    font-weight:700;
+    font-size: clamp(20px, 3.4vw, 46px);
+    letter-spacing: 0.5px;
+  }
+  #banner.show{ display:block; }
+  #banner .sub{
+    display:block;
+    font-weight:500;
+    font-size: 0.55em;
+    margin-top: 0.2em;
+    opacity:0.9;
+  }
+
+  /* ---------- Top row: clock + dates ---------- */
+  #top{
+    flex: 0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    gap: 3vw;
+  }
+  #clockBlock{ text-align:left; }
+  #clock{
+    font-size: clamp(64px, 13vw, 220px);
+    font-weight:800;
+    line-height:1;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  #ampm{ font-size:0.35em; font-weight:700; margin-left:0.15em; }
+  #dow{
+    font-size: clamp(20px, 3vw, 44px);
+    font-weight:600;
+    color: var(--fg-soft);
+    margin-top: 0.2vh;
+  }
+  #dateBlock{ text-align:right; }
+  #engDate{
+    font-size: clamp(20px, 2.6vw, 40px);
+    font-weight:600;
+    margin-bottom: 0.6vh;
+  }
+  #hebDate{
+    font-size: clamp(26px, 3.6vw, 54px);
+    font-weight:700;
+    direction: rtl;
+    font-family: "Times New Roman", "Arial Hebrew", "Noto Sans Hebrew", serif;
+  }
+  #hebDateLatin{
+    font-size: clamp(16px, 1.8vw, 26px);
+    color: var(--fg-soft);
+    margin-top:0.3vh;
+  }
+
+  /* ---------- Omer ---------- */
+  #omerBar{
+    display:none;
+    flex: 0 0 auto;
+    text-align:center;
+    padding: 1vh;
+    font-size: clamp(18px, 2.4vw, 32px);
+    font-weight:700;
+    border-top: 2px solid var(--line);
+    border-bottom: 2px solid var(--line);
+  }
+  #omerBar.show{ display:block; }
+
+  /* ---------- Zmanim grid ---------- */
+  #zmanim{
+    flex: 1 1 auto;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.4vh 1.4vw;
+    align-content:center;
+  }
+  .zman{
+    background:var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 1.6vh 1vw;
+    text-align:center;
+  }
+  .zman .label{
+    font-size: clamp(14px, 1.5vw, 22px);
+    font-weight:600;
+    color: var(--fg-soft);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .zman .time{
+    font-size: clamp(22px, 3vw, 42px);
+    font-weight:800;
+    margin-top:0.3vh;
+    font-variant-numeric: tabular-nums;
+  }
+  .zman.highlight{ border-color: var(--accent); border-width:3px; }
+
+  /* ---------- Footer ---------- */
+  #footer{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    font-size: clamp(12px, 1.2vw, 16px);
+    color: var(--fg-soft);
+  }
+
+  /* ---------- Discreet controls ---------- */
+  #gearBtn{
+    position:fixed; top:0; right:0;
+    width: 70px; height:70px;
+    background:transparent; border:none;
+    opacity:0.06;
+    z-index: 50;
+  }
+  #gearBtn:active{ opacity:0.3; }
+
+  #settingsPanel{
+    display:none;
+    position:fixed; inset:0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items:center; justify-content:center;
+  }
+  #settingsPanel.show{ display:flex; }
+  #settingsCard{
+    background:#fff; color:#111;
+    width:min(560px, 92vw);
+    max-height:88vh; overflow:auto;
+    border-radius:18px;
+    padding: 28px 30px;
+    font-size:18px;
+  }
+  #settingsCard h2{ margin-top:0; }
+  #settingsCard label{ display:block; margin:14px 0 6px; font-weight:600; }
+  #settingsCard input[type=number]{ font-size:18px; padding:8px; width:110px; }
+  #settingsCard .row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0; }
+  #settingsCard button{
+    font-size:18px; padding:12px 20px; border-radius:10px; border:2px solid #173d6b;
+    background:#173d6b; color:#fff; cursor:pointer; margin-top:10px; margin-right:10px;
+  }
+  #settingsCard button.secondary{ background:#fff; color:#173d6b; }
+  #settingsCard .hint{ color:#555; font-size:15px; line-height:1.4; }
+  #syncStatus{ margin-top:10px; font-size:15px; color:#333; }
+
+  /* ---------- Print view (hidden on screen) ---------- */
+  #printArea{ display:none; }
+
+  @media print{
+    #gearBtn, #settingsPanel { display:none !important; }
+    #app{ display:none !important; }
+    body{ overflow:visible; background:#fff; color:#000; }
+    #printArea{
+      display:block !important;
+      color:#000; background:#fff;
+      font-family: Arial, sans-serif;
+    }
+    #printArea h1{ text-align:center; font-size:28px; margin-bottom:4px; }
+    #printArea h2{ text-align:center; font-size:18px; font-weight:normal; margin-top:0; color:#333; }
+    #printArea table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    #printArea th{ border:1px solid #000; padding:4px; font-size:13px; background:#eee; }
+    #printArea td{ border:1px solid #000; vertical-align:top; height:100px; padding:4px; font-size:12px; }
+    #printArea .pnum{ font-weight:bold; font-size:16px; }
+    #printArea .pheb{ font-size:12px; direction:rtl; }
+    #printArea .pholiday{ font-size:11px; font-weight:bold; margin-top:2px; }
+    #printArea .pzman{ font-size:10px; color:#333; margin-top:2px; }
+    #printArea .pnote{ font-size:12px; margin-top:14px; text-align:center; color:#333; }
+  }
+</style>
+</head>
+<body data-theme="day">
+
+<div id="app">
+  <div id="banner"></div>
+
+  <div id="top">
+    <div id="clockBlock">
+      <div id="clock">--:--<span id="ampm"></span></div>
+      <div id="dow">&nbsp;</div>
+    </div>
+    <div id="dateBlock">
+      <div id="engDate">&nbsp;</div>
+      <div id="hebDate">&nbsp;</div>
+      <div id="hebDateLatin">&nbsp;</div>
+    </div>
+  </div>
+
+  <div id="omerBar"></div>
+
+  <div id="zmanim">
+    <div class="zman"><div class="label">Alot Hashachar</div><div class="time" id="z-alot">--:--</div></div>
+    <div class="zman"><div class="label">Netz (Sunrise)</div><div class="time" id="z-netz">--:--</div></div>
+    <div class="zman"><div class="label">Sof Zman Shma</div><div class="time" id="z-shma">--:--</div></div>
+    <div class="zman"><div class="label">Sof Zman Tefila</div><div class="time" id="z-tefila">--:--</div></div>
+    <div class="zman"><div class="label">Chatzos</div><div class="time" id="z-chatzos">--:--</div></div>
+    <div class="zman"><div class="label">Mincha Ketana</div><div class="time" id="z-mincha">--:--</div></div>
+    <div class="zman highlight"><div class="label" id="z-candle-label">Candle Lighting</div><div class="time" id="z-candle">--:--</div></div>
+    <div class="zman highlight"><div class="label" id="z-havdalah-label">Havdalah</div><div class="time" id="z-havdalah">--:--</div></div>
+  </div>
+
+  <div id="footer">Kiryas Joel (Monroe), NY &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
+</div>
+
+<button id="gearBtn" aria-label="Settings"></button>
+
+<div id="settingsPanel">
+  <div id="settingsCard">
+    <h2>Settings</h2>
+    <div class="row">
+      <button id="syncBtn">🔄 Sync / Update</button>
+      <button id="printBtn" class="secondary">🖨️ Print Next Month</button>
+      <button id="fullscreenBtn" class="secondary">⛶ Full Screen (Kiosk)</button>
+    </div>
+    <div id="syncStatus"></div>
+
+    <label>Candle lighting — minutes before sunset</label>
+    <input type="number" id="candleMinInput" min="10" max="40" value="18">
+
+    <label>Havdalah — minutes after sunset</label>
+    <input type="number" id="havdalahMinInput" min="30" max="90" value="72">
+
+    <label>Theme</label>
+    <div class="row">
+      <button id="themeAuto" class="secondary">Automatic (day/night)</button>
+      <button id="themeDay" class="secondary">Always Bright</button>
+      <button id="themeNight" class="secondary">Always Soft/Dark</button>
+    </div>
+
+    <p class="hint">
+      These times use the common GRA-based calculation for Kiryas Joel, NY coordinates.
+      Please confirm exact candle-lighting and havdalah practice with your Rav — this device
+      is for convenient reference, not for psak halacha.
+    </p>
+    <button id="closeSettings">Close</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script src="engine.js"></script>
+<script>
+/* ===================== App configuration ===================== */
+const LAT = 41.3307, LON = -74.1868;
+const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, theme: 'auto' };
+
+function loadSettings(){
+  try {
+    const raw = localStorage.getItem('zmanSettings');
+    if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
+  } catch(e){}
+  return Object.assign({}, DEFAULTS);
+}
+function saveSettings(s){
+  try { localStorage.setItem('zmanSettings', JSON.stringify(s)); } catch(e){}
+}
+let settings = loadSettings();
+
+/* ===================== Clock + date rendering ===================== */
+const clockEl = document.getElementById('clock');
+const ampmEl = document.getElementById('ampm');
+const dowEl = document.getElementById('dow');
+const engDateEl = document.getElementById('engDate');
+const hebDateEl = document.getElementById('hebDate');
+const hebDateLatinEl = document.getElementById('hebDateLatin');
+const bannerEl = document.getElementById('banner');
+const omerBarEl = document.getElementById('omerBar');
+
+const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let cachedDayState = null; // recomputed once per minute
+let cachedDayKey = null;
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function renderClock(now){
+  let h = now.getHours();
+  const m = now.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  let h12 = h % 12; if (h12===0) h12 = 12;
+  clockEl.firstChild.textContent = `${h12}:${pad2(m)}`;
+  ampmEl.textContent = ampm;
+  dowEl.textContent = DOW_NAMES[now.getDay()];
+}
+
+function dateToLocalMinutes(minutesLocal){
+  // build a Date for "today" at the given local minutes-since-midnight
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  d.setMinutes(Math.round(minutesLocal));
+  return d;
+}
+
+function computeDayState(now){
+  const jdnToday = HebrewEngine.gregorianToJDN(now.getFullYear(), now.getMonth()+1, now.getDate());
+  const zmanToday = ZmanimEngine.getZmanim(now, LAT, LON, settings);
+
+  let hebrewJdn = jdnToday;
+  let usedTomorrowZman = false;
+  if (zmanToday) {
+    const sunsetDate = dateToLocalMinutes(zmanToday.shkiah.minutesLocal);
+    if (now >= sunsetDate) { hebrewJdn = jdnToday + 1; usedTomorrowZman = true; }
+  }
+  const hebDate = HebrewEngine.jdnToHebrew(hebrewJdn);
+  const holiday = HebrewEngine.getHolidayForJdn(hebrewJdn, hebDate.year);
+  const omer = HebrewEngine.getOmerDay(hebrewJdn, hebDate.year);
+
+  // tomorrow's holiday (to know if today is "erev" something)
+  const holidayTomorrow = HebrewEngine.getHolidayForJdn(hebrewJdn + 1, hebDate.year);
+
+  const dow = now.getDay(); // 0=Sun..6=Sat
+  const isFriday = dow === 5;
+  const isSaturday = dow === 6;
+  const erevSomething = isFriday || (holidayTomorrow && holidayTomorrow.category === 'yomtov' && holidayTomorrow.dayNum === 1);
+  const inHolyTime = isSaturday || (holiday && holiday.category === 'yomtov');
+
+  return { jdnToday, hebrewJdn, hebDate, holiday, holidayTomorrow, omer, zmanToday, isFriday, isSaturday, erevSomething, inHolyTime };
+}
+
+function renderBanner(state){
+  let html = '';
+  let show = false;
+  if (state.inHolyTime) {
+    show = true;
+    if (state.isSaturday && (!state.holiday || state.holiday.category!=='yomtov')) {
+      html = 'Shabbat Shalom <span class="sub">May you have a peaceful and restful Shabbos</span>';
+    } else if (state.holiday) {
+      html = `${state.holiday.name} <span class="sub">${state.holiday.totalDays>1 ? 'Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : ''}</span>`;
+    }
+  } else if (state.erevSomething && state.zmanToday) {
+    show = true;
+    const label = state.holidayTomorrow ? 'Erev ' + state.holidayTomorrow.name : 'Erev Shabbat';
+    html = `${label} <span class="sub">Candle Lighting at ${state.zmanToday.candleLighting.text}</span>`;
+  } else if (state.holiday) {
+    show = true;
+    html = `${state.holiday.name}${state.holiday.totalDays>1 ? ' — Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : ''}`;
+  }
+  bannerEl.innerHTML = html;
+  bannerEl.classList.toggle('show', show);
+}
+
+function renderOmer(state){
+  if (state.omer) {
+    omerBarEl.textContent = `Today is ${state.omer} day${state.omer>1?'s':''} of the Omer`;
+    omerBarEl.classList.add('show');
+  } else {
+    omerBarEl.classList.remove('show');
+  }
+}
+
+function renderDates(now, state){
+  engDateEl.textContent = `${DOW_NAMES[now.getDay()]}, ${MONTH_NAMES_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  const hd = state.hebDate;
+  const dayStr = HebrewEngine.hebrewNumeral(hd.day);
+  const yearStr = HebrewEngine.hebrewYearString(hd.year);
+  hebDateEl.textContent = `${dayStr} ${hd.monthNameHebrew} ${yearStr}`;
+  hebDateLatinEl.textContent = `${hd.day} ${hd.monthName} ${hd.year}`;
+}
+
+function renderZmanim(state){
+  const z = state.zmanToday;
+  const set = (id, val) => { document.getElementById(id).textContent = val ? val.text : '--:--'; };
+  if (!z) return;
+  set('z-alot', z.alotHashachar);
+  set('z-netz', z.netzHachama);
+  set('z-shma', z.sofZmanShma);
+  set('z-tefila', z.sofZmanTefila);
+  set('z-chatzos', z.chatzos);
+  set('z-mincha', z.minchaKetana);
+
+  const candleLabel = document.getElementById('z-candle-label');
+  const havdalahLabel = document.getElementById('z-havdalah-label');
+  if (state.holidayTomorrow && state.holidayTomorrow.category==='yomtov') {
+    candleLabel.textContent = 'Candle Lighting (' + state.holidayTomorrow.name + ')';
+  } else {
+    candleLabel.textContent = 'Candle Lighting';
+  }
+  if (state.holiday && state.holiday.category==='yomtov') {
+    havdalahLabel.textContent = state.holiday.name + ' Ends';
+  } else {
+    havdalahLabel.textContent = 'Havdalah';
+  }
+  set('z-candle', z.candleLighting);
+  set('z-havdalah', z.havdalah);
+}
+
+function applyTheme(now, state){
+  let theme = settings.theme;
+  if (theme === 'auto') {
+    if (state.zmanToday) {
+      const sunrise = dateToLocalMinutes(state.zmanToday.netzHachama.minutesLocal);
+      const sunset = dateToLocalMinutes(state.zmanToday.shkiah.minutesLocal);
+      theme = (now < sunrise || now >= sunset) ? 'night' : 'day';
+    } else {
+      theme = 'day';
+    }
+  }
+  document.body.setAttribute('data-theme', theme);
+}
+
+function tick(){
+  const now = new Date();
+  renderClock(now);
+
+  const dayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+  if (dayKey !== cachedDayKey) {
+    cachedDayKey = dayKey;
+    cachedDayState = computeDayState(now);
+    renderDates(now, cachedDayState);
+    renderZmanim(cachedDayState);
+    renderBanner(cachedDayState);
+    renderOmer(cachedDayState);
+  }
+  if (cachedDayState) applyTheme(now, cachedDayState);
+}
+
+setInterval(tick, 1000);
+tick();
+
+/* ===================== Settings panel ===================== */
+const gearBtn = document.getElementById('gearBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const candleMinInput = document.getElementById('candleMinInput');
+const havdalahMinInput = document.getElementById('havdalahMinInput');
+
+function openSettings(){
+  candleMinInput.value = settings.candleLightingMinutes;
+  havdalahMinInput.value = settings.havdalahMinutes;
+  settingsPanel.classList.add('show');
+}
+gearBtn.addEventListener('click', openSettings);
+document.getElementById('closeSettings').addEventListener('click', () => {
+  settings.candleLightingMinutes = parseInt(candleMinInput.value, 10) || DEFAULTS.candleLightingMinutes;
+  settings.havdalahMinutes = parseInt(havdalahMinInput.value, 10) || DEFAULTS.havdalahMinutes;
+  saveSettings(settings);
+  cachedDayKey = null; // force recompute
+  settingsPanel.classList.remove('show');
+});
+document.getElementById('themeAuto').addEventListener('click', () => { settings.theme='auto'; saveSettings(settings); });
+document.getElementById('themeDay').addEventListener('click', () => { settings.theme='day'; saveSettings(settings); document.body.setAttribute('data-theme','day'); });
+document.getElementById('themeNight').addEventListener('click', () => { settings.theme='night'; saveSettings(settings); document.body.setAttribute('data-theme','night'); });
+
+document.getElementById('fullscreenBtn').addEventListener('click', () => {
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+});
+
+/* ===================== Sync button (re-registers SW / re-fetches app files while online) ===================== */
+document.getElementById('syncBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('syncStatus');
+  statusEl.textContent = 'Checking for updates…';
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update();
+    }
+    const now = new Date();
+    localStorage.setItem('lastSync', now.toISOString());
+    statusEl.textContent = 'Synced at ' + now.toLocaleString();
+    updateLastSyncFooter();
+  } catch (e) {
+    statusEl.textContent = 'Could not sync — check Wi-Fi connection.';
+  }
+});
+function updateLastSyncFooter(){
+  const raw = localStorage.getItem('lastSync');
+  const el = document.getElementById('lastSync');
+  if (raw) {
+    const d = new Date(raw);
+    el.textContent = 'last updated ' + d.toLocaleDateString();
+  } else {
+    el.textContent = 'not yet synced';
+  }
+}
+updateLastSyncFooter();
+
+/* ===================== Print: next month calendar ===================== */
+document.getElementById('printBtn').addEventListener('click', () => {
+  buildPrintCalendar();
+  settingsPanel.classList.remove('show');
+  setTimeout(() => window.print(), 150);
+});
+
+function buildPrintCalendar(){
+  const now = new Date();
+  let y = now.getFullYear(), m = now.getMonth() + 1; // next month
+  m += 1;
+  if (m > 12) { m = 1; y += 1; }
+
+  const firstJdn = HebrewEngine.gregorianToJDN(y, m, 1);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstDow = HebrewEngine.jdnToGregorian(firstJdn); // not needed, use JS Date for dow
+  const firstDowJS = new Date(y, m - 1, 1).getDay();
+
+  let rows = '';
+  let cellsHtml = [];
+  for (let i = 0; i < firstDowJS; i++) cellsHtml.push('<td></td>');
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const jdn = HebrewEngine.gregorianToJDN(y, m, day);
+    const hebDate = HebrewEngine.jdnToHebrew(jdn);
+    const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
+    const jsDate = new Date(y, m - 1, day);
+    const dow = jsDate.getDay();
+
+    let zmanLine = '';
+    const z = ZmanimEngine.getZmanim(jsDate, LAT, LON, settings);
+    if (z) {
+      if (dow === 5) zmanLine = `Candles: ${z.candleLighting.text}`;
+      else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
+    }
+    const omer = HebrewEngine.getOmerDay(jdn, hebDate.year);
+
+    let cell = `<td>
+      <div class="pnum">${day}</div>
+      <div class="pheb">${hebDate.day} ${hebDate.monthName}</div>
+      ${holiday ? `<div class="pholiday">${holiday.name}</div>` : ''}
+      ${omer ? `<div class="pzman">Omer: ${omer}</div>` : ''}
+      ${zmanLine ? `<div class="pzman">${zmanLine}</div>` : ''}
+    </td>`;
+    cellsHtml.push(cell);
+
+    if (cellsHtml.length === 7) { rows += '<tr>' + cellsHtml.join('') + '</tr>'; cellsHtml = []; }
+  }
+  if (cellsHtml.length) {
+    while (cellsHtml.length < 7) cellsHtml.push('<td></td>');
+    rows += '<tr>' + cellsHtml.join('') + '</tr>';
+  }
+
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = `
+    <h1>${MONTH_NAMES_EN[m-1]} ${y}</h1>
+    <h2>Kiryas Joel (Monroe), NY — Zmanim &amp; Jewish Calendar</h2>
+    <table>
+      <thead><tr>
+        <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="pnote">Candle-lighting / Havdalah times use the common GRA-based calculation. Please confirm exact practice with your Rav.</p>
+  `;
+}
+
+/* ===================== Service worker registration ===================== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
