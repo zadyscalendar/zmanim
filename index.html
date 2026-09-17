@@ -76,7 +76,7 @@
     display:flex; align-items:center; justify-content:space-between;
     gap: 3vw;
   }
-  #clockBlock{ text-align:left; }
+  #clockBlock{ text-align:left; cursor:pointer; }
   #clock{
     font-size: clamp(80px, 16.5vw, 280px);
     font-weight:800;
@@ -85,6 +85,18 @@
     font-variant-numeric: tabular-nums;
   }
   #ampm{ font-size:0.35em; font-weight:700; margin-left:0.15em; }
+
+  #analogClock{ display:none; width: clamp(160px, 24vw, 340px); height: auto; }
+  #analogClock .face{ fill: var(--panel); stroke: var(--fg); stroke-width:3; }
+  #analogClock .tick{ stroke: var(--fg); stroke-width:2; }
+  #analogClock .num{ fill: var(--fg); font-weight:700; font-family: -apple-system, "Segoe UI", Arial, sans-serif; text-anchor:middle; dominant-baseline:middle; }
+  #analogClock .hand{ stroke: var(--fg); stroke-linecap:round; }
+  #analogClock .hourHand{ stroke-width:7; }
+  #analogClock .minuteHand{ stroke-width:5; }
+  #analogClock .secondHand{ stroke: var(--accent); stroke-width:2; }
+  #analogClock .hub{ fill: var(--fg); }
+  body[data-clockmode="analog"] #clock{ display:none; }
+  body[data-clockmode="analog"] #analogClock{ display:block; }
   #dow{
     display:inline-block;
     font-size: clamp(22px, 3.2vw, 46px);
@@ -177,6 +189,14 @@
   }
   .zman.highlight{ border-color: var(--accent); border-width:3px; }
 
+  /* ---------- Portrait layout (phones held upright) ---------- */
+  @media (orientation: portrait){
+    #top{ flex-direction:column; align-items:center; text-align:center; gap:1vh; }
+    #dateBlock{ text-align:center; }
+    #zmanim{ grid-template-columns: repeat(2, 1fr); }
+    #clock{ font-size: clamp(64px, 20vw, 180px); }
+  }
+
   /* ---------- Footer ---------- */
   #footer{
     flex:0 0 auto;
@@ -214,6 +234,7 @@
   #settingsCard h2{ margin-top:0; }
   #settingsCard label{ display:block; margin:14px 0 6px; font-weight:600; }
   #settingsCard input[type=number]{ font-size:18px; padding:8px; width:110px; }
+  #settingsCard select{ font-size:18px; padding:8px; border-radius:8px; }
   #settingsCard .row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0; }
   #settingsCard button{
     font-size:18px; padding:12px 20px; border-radius:10px; border:2px solid #173d6b;
@@ -245,6 +266,8 @@
     #printArea .pholiday{ font-size:11px; font-weight:bold; margin-top:2px; }
     #printArea .pzman{ font-size:10px; color:#333; margin-top:2px; }
     #printArea .pnote{ font-size:12px; margin-top:14px; text-align:center; color:#333; }
+    #printArea .monthPage{ page-break-after: always; }
+    #printArea .monthPage:last-child{ page-break-after: auto; }
   }
 </style>
 </head>
@@ -256,6 +279,7 @@
   <div id="top">
     <div id="clockBlock">
       <div id="clock">--:--<span id="ampm"></span></div>
+      <svg id="analogClock" viewBox="0 0 200 200"></svg>
       <div id="dow">&nbsp;</div>
     </div>
     <div id="dateBlock">
@@ -278,7 +302,7 @@
     <div class="zman"><div class="label" id="z-havdalah-label">Tzeit Hakochavim</div><div class="time" id="z-havdalah">--:--</div></div>
   </div>
 
-  <div id="footer">Kiryas Joel (Monroe), NY &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
+  <div id="footer"><span id="footerLocation">Kiryas Joel (Monroe), NY</span> &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
 </div>
 
 <button id="gearBtn" aria-label="Settings"></button>
@@ -288,10 +312,35 @@
     <h2>Settings</h2>
     <div class="row">
       <button id="syncBtn">🔄 Sync / Update</button>
-      <button id="printBtn" class="secondary">🖨️ Print Next Month</button>
       <button id="fullscreenBtn" class="secondary">⛶ Full Screen (Kiosk)</button>
     </div>
     <div id="syncStatus"></div>
+
+    <label>🖨️ Print a Calendar (dates, zmanim &amp; Yomim Tovim — no clock)</label>
+    <div class="row">
+      <select id="printRangeSelect">
+        <option value="1">This month</option>
+        <option value="2">Next 2 months</option>
+        <option value="3" selected>Next 3 months</option>
+        <option value="6">Next 6 months</option>
+        <option value="12">Next 12 months</option>
+        <option value="24">Next 24 months (2 years)</option>
+      </select>
+      <button id="printBtn">🖨️ Print</button>
+    </div>
+
+    <label>Location</label>
+    <div class="row">
+      <button id="useKjBtn" class="secondary">📍 Kiryas Joel, NY (default)</button>
+      <button id="useMyLocationBtn" class="secondary">📍 Use My Current Location</button>
+    </div>
+    <div id="locationStatus" class="hint">Currently using: Kiryas Joel (Monroe), NY</div>
+    <p class="hint">
+      On the wall-mounted tablet, leave this on Kiryas Joel. If you install this
+      same app on a phone and want zmanim for wherever you are that day, tap
+      "Use My Current Location" — it will ask permission once, then remember
+      your choice on that device until you switch it back.
+    </p>
 
     <label>Candle lighting — minutes before sunset</label>
     <input type="number" id="candleMinInput" min="10" max="40" value="18">
@@ -323,20 +372,74 @@
 <script src="engine.js"></script>
 <script>
 /* ===================== App configuration ===================== */
-const LAT = 41.3307, LON = -74.1868;
-const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto' };
+const KJ_LOCATION = { mode: 'kj', lat: 41.3307, lon: -74.1868, label: 'Kiryas Joel (Monroe), NY' };
+const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto', location: KJ_LOCATION, clockMode: 'digital' };
 
 function loadSettings(){
   try {
     const raw = localStorage.getItem('zmanSettings');
-    if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const merged = Object.assign({}, DEFAULTS, parsed);
+      merged.location = Object.assign({}, KJ_LOCATION, parsed.location || {});
+      return merged;
+    }
   } catch(e){}
-  return Object.assign({}, DEFAULTS);
+  return Object.assign({}, DEFAULTS, { location: Object.assign({}, KJ_LOCATION) });
 }
 function saveSettings(s){
   try { localStorage.setItem('zmanSettings', JSON.stringify(s)); } catch(e){}
 }
 let settings = loadSettings();
+
+/* ----- Location: defaults to Kiryas Joel; can switch to GPS/Wi-Fi location
+   (for using this as a personal phone app anywhere) or a manually-entered
+   spot. Whatever is chosen is remembered on this device and used for every
+   zmanim calculation until changed again. ----- */
+function currentLat(){ return settings.location.lat; }
+function currentLon(){ return settings.location.lon; }
+
+function useKiryasJoel(){
+  settings.location = Object.assign({}, KJ_LOCATION);
+  saveSettings(settings);
+  cachedDayKey = null;
+  updateLocationStatus();
+}
+
+function useMyLocation(){
+  const statusEl = document.getElementById('locationStatus');
+  if (!('geolocation' in navigator)) {
+    statusEl.textContent = 'This device/browser does not support location.';
+    return;
+  }
+  statusEl.textContent = 'Finding your location…';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      settings.location = {
+        mode: 'auto',
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        label: `Your Location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`
+      };
+      saveSettings(settings);
+      cachedDayKey = null;
+      updateLocationStatus();
+    },
+    (err) => {
+      let msg = 'Could not get your location.';
+      if (err.code === err.PERMISSION_DENIED) msg = 'Location permission was denied — allow it in your browser/phone settings, or use Kiryas Joel (default).';
+      statusEl.textContent = msg;
+    },
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 3600000 }
+  );
+}
+
+function updateLocationStatus(){
+  const statusEl = document.getElementById('locationStatus');
+  if (statusEl) statusEl.textContent = 'Currently using: ' + settings.location.label;
+  const footerLoc = document.getElementById('footerLocation');
+  if (footerLoc) footerLoc.textContent = settings.location.label;
+}
 
 /* ===================== Clock + date rendering ===================== */
 const clockEl = document.getElementById('clock');
@@ -355,6 +458,84 @@ let cachedDayState = null; // recomputed once per minute
 let cachedDayKey = null;
 
 function pad2(n){ return String(n).padStart(2,'0'); }
+
+/* ----- Analog clock face (built once; hands updated every second) ----- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function buildAnalogFace(){
+  const svg = document.getElementById('analogClock');
+  const cx = 100, cy = 100;
+  const face = document.createElementNS(SVGNS, 'circle');
+  face.setAttribute('cx', cx); face.setAttribute('cy', cy); face.setAttribute('r', 96);
+  face.setAttribute('class', 'face');
+  svg.appendChild(face);
+
+  for (let i = 0; i < 60; i++) {
+    const angle = (i * 6) * Math.PI / 180;
+    const isHour = i % 5 === 0;
+    const rOuter = 90, rInner = isHour ? 78 : 84;
+    const x1 = cx + rOuter * Math.sin(angle), y1 = cy - rOuter * Math.cos(angle);
+    const x2 = cx + rInner * Math.sin(angle), y2 = cy - rInner * Math.cos(angle);
+    const tick = document.createElementNS(SVGNS, 'line');
+    tick.setAttribute('x1', x1); tick.setAttribute('y1', y1);
+    tick.setAttribute('x2', x2); tick.setAttribute('y2', y2);
+    tick.setAttribute('class', 'tick');
+    if (isHour) tick.setAttribute('stroke-width', '3');
+    svg.appendChild(tick);
+  }
+
+  for (let n = 1; n <= 12; n++) {
+    const angle = (n * 30) * Math.PI / 180;
+    const r = 66;
+    const x = cx + r * Math.sin(angle), y = cy - r * Math.cos(angle);
+    const text = document.createElementNS(SVGNS, 'text');
+    text.setAttribute('x', x); text.setAttribute('y', y);
+    text.setAttribute('class', 'num');
+    text.setAttribute('font-size', '18');
+    text.textContent = n;
+    svg.appendChild(text);
+  }
+
+  const mkHand = (id, cls) => {
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('id', id);
+    line.setAttribute('class', 'hand ' + cls);
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', cx); line.setAttribute('y2', cy);
+    svg.appendChild(line);
+  };
+  mkHand('hourHand', 'hourHand');
+  mkHand('minuteHand', 'minuteHand');
+  mkHand('secondHand', 'secondHand');
+
+  const hub = document.createElementNS(SVGNS, 'circle');
+  hub.setAttribute('cx', cx); hub.setAttribute('cy', cy); hub.setAttribute('r', 5);
+  hub.setAttribute('class', 'hub');
+  svg.appendChild(hub);
+}
+buildAnalogFace();
+
+function renderAnalogClock(now){
+  const cx = 100, cy = 100;
+  const h = now.getHours() % 12, m = now.getMinutes(), s = now.getSeconds();
+  const setHand = (id, lengthR, degrees) => {
+    const rad = degrees * Math.PI / 180;
+    const el = document.getElementById(id);
+    el.setAttribute('x2', cx + lengthR * Math.sin(rad));
+    el.setAttribute('y2', cy - lengthR * Math.cos(rad));
+  };
+  setHand('hourHand', 48, (h + m / 60) * 30);
+  setHand('minuteHand', 68, (m + s / 60) * 6);
+  setHand('secondHand', 74, s * 6);
+}
+
+/* ----- Tap the clock to switch digital <-> analog ----- */
+document.getElementById('clockBlock').addEventListener('click', () => {
+  settings.clockMode = settings.clockMode === 'analog' ? 'digital' : 'analog';
+  saveSettings(settings);
+  document.body.setAttribute('data-clockmode', settings.clockMode);
+});
+document.body.setAttribute('data-clockmode', settings.clockMode || 'digital');
+
 
 function renderClock(now){
   let h = now.getHours();
@@ -375,7 +556,7 @@ function dateToLocalMinutes(minutesLocal){
 
 function computeDayState(now){
   const jdnToday = HebrewEngine.gregorianToJDN(now.getFullYear(), now.getMonth()+1, now.getDate());
-  const zmanToday = ZmanimEngine.getZmanim(now, LAT, LON, settings);
+  const zmanToday = ZmanimEngine.getZmanim(now, currentLat(), currentLon(), settings);
 
   let hebrewJdn = jdnToday;
   let usedTomorrowZman = false;
@@ -512,6 +693,7 @@ function applyTheme(now, state){
 function tick(){
   const now = new Date();
   renderClock(now);
+  renderAnalogClock(now);
 
   const dayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
   if (dayKey !== cachedDayKey) {
@@ -539,9 +721,13 @@ function openSettings(){
   candleMinInput.value = settings.candleLightingMinutes;
   havdalahMinInput.value = settings.havdalahMinutes;
   tzeitMinInput.value = settings.tzeitMinutes;
+  updateLocationStatus();
   settingsPanel.classList.add('show');
 }
 gearBtn.addEventListener('click', openSettings);
+document.getElementById('useKjBtn').addEventListener('click', useKiryasJoel);
+document.getElementById('useMyLocationBtn').addEventListener('click', useMyLocation);
+updateLocationStatus();
 document.getElementById('closeSettings').addEventListener('click', () => {
   settings.candleLightingMinutes = parseInt(candleMinInput.value, 10) || DEFAULTS.candleLightingMinutes;
   settings.havdalahMinutes = parseInt(havdalahMinInput.value, 10) || DEFAULTS.havdalahMinutes;
@@ -591,22 +777,17 @@ function updateLastSyncFooter(){
 }
 updateLastSyncFooter();
 
-/* ===================== Print: next month calendar ===================== */
+/* ===================== Print: selectable date-range calendar ===================== */
 document.getElementById('printBtn').addEventListener('click', () => {
-  buildPrintCalendar();
+  const monthCount = parseInt(document.getElementById('printRangeSelect').value, 10) || 1;
+  buildPrintCalendarRange(monthCount);
   settingsPanel.classList.remove('show');
-  setTimeout(() => window.print(), 150);
+  setTimeout(() => window.print(), 200);
 });
 
-function buildPrintCalendar(){
-  const now = new Date();
-  let y = now.getFullYear(), m = now.getMonth() + 1; // next month
-  m += 1;
-  if (m > 12) { m = 1; y += 1; }
-
-  const firstJdn = HebrewEngine.gregorianToJDN(y, m, 1);
+function buildOneMonthTable(y, m){
+  // y = full year, m = 1-based month
   const daysInMonth = new Date(y, m, 0).getDate();
-  const firstDow = HebrewEngine.jdnToGregorian(firstJdn); // not needed, use JS Date for dow
   const firstDowJS = new Date(y, m - 1, 1).getDay();
 
   let rows = '';
@@ -621,7 +802,7 @@ function buildPrintCalendar(){
     const dow = jsDate.getDay();
 
     let zmanLine = '';
-    const z = ZmanimEngine.getZmanim(jsDate, LAT, LON, settings);
+    const z = ZmanimEngine.getZmanim(jsDate, currentLat(), currentLon(), settings);
     if (z) {
       if (dow === 5) zmanLine = `Candles: ${z.candleLighting.text}`;
       else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
@@ -644,18 +825,31 @@ function buildPrintCalendar(){
     rows += '<tr>' + cellsHtml.join('') + '</tr>';
   }
 
-  const printArea = document.getElementById('printArea');
-  printArea.innerHTML = `
-    <h1>${MONTH_NAMES_EN[m-1]} ${y}</h1>
-    <h2>Kiryas Joel (Monroe), NY — Zmanim &amp; Jewish Calendar</h2>
-    <table>
-      <thead><tr>
-        <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <p class="pnote">Candle-lighting / Havdalah times use the common GRA-based calculation. Please confirm exact practice with your Rav.</p>
+  return `
+    <div class="monthPage">
+      <h1>${MONTH_NAMES_EN[m-1]} ${y}</h1>
+      <h2>${settings.location.label} — Zmanim &amp; Jewish Calendar</h2>
+      <table>
+        <thead><tr>
+          <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="pnote">Candle-lighting / Havdalah times use the common GRA-based calculation. Please confirm exact practice with your Rav.</p>
+    </div>
   `;
+}
+
+function buildPrintCalendarRange(monthCount){
+  const now = new Date();
+  let y = now.getFullYear(), m = now.getMonth() + 1; // starts with the current month
+  let html = '';
+  for (let i = 0; i < monthCount; i++) {
+    html += buildOneMonthTable(y, m);
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+  }
+  document.getElementById('printArea').innerHTML = html;
 }
 
 /* ===================== Service worker registration ===================== */
