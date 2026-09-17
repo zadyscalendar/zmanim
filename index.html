@@ -78,7 +78,7 @@
   }
   #clockBlock{ text-align:left; }
   #clock{
-    font-size: clamp(64px, 13vw, 220px);
+    font-size: clamp(80px, 16.5vw, 280px);
     font-weight:800;
     line-height:1;
     letter-spacing: 1px;
@@ -86,10 +86,33 @@
   }
   #ampm{ font-size:0.35em; font-weight:700; margin-left:0.15em; }
   #dow{
-    font-size: clamp(20px, 3vw, 44px);
-    font-weight:600;
-    color: var(--fg-soft);
-    margin-top: 0.2vh;
+    display:inline-block;
+    font-size: clamp(22px, 3.2vw, 46px);
+    font-weight:700;
+    color: var(--fg);
+    margin-top: 1vh;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    background: rgba(23,61,107,0.10);
+    border: 2px solid rgba(23,61,107,0.25);
+    direction: rtl;
+    font-family: "Times New Roman", "Arial Hebrew", "Noto Sans Hebrew", serif;
+    transition: all 0.4s ease;
+  }
+  [data-theme="night"] #dow{
+    background: rgba(231,217,168,0.10);
+    border-color: rgba(231,217,168,0.3);
+  }
+  #dow.yomtov{
+    background: var(--accent);
+    color:#fff;
+    border-color: var(--accent);
+    font-size: clamp(26px, 3.8vw, 54px);
+    box-shadow: 0 0 0 6px rgba(23,61,107,0.15);
+  }
+  [data-theme="night"] #dow.yomtov{
+    background: var(--accent); color: #05070a;
+    box-shadow: 0 0 0 6px rgba(231,217,168,0.18);
   }
   #dateBlock{ text-align:right; }
   #engDate{
@@ -102,7 +125,9 @@
     font-weight:700;
     direction: rtl;
     font-family: "Times New Roman", "Arial Hebrew", "Noto Sans Hebrew", serif;
+    transition: all 0.4s ease;
   }
+  #hebDate.yomtov{ color: var(--accent); }
   #hebDateLatin{
     font-size: clamp(16px, 1.8vw, 26px);
     color: var(--fg-soft);
@@ -133,21 +158,21 @@
   .zman{
     background:var(--panel);
     border: 2px solid var(--line);
-    border-radius: 14px;
-    padding: 1.6vh 1vw;
+    border-radius: 12px;
+    padding: 1vh 0.8vw;
     text-align:center;
   }
   .zman .label{
-    font-size: clamp(14px, 1.5vw, 22px);
+    font-size: clamp(11px, 1.05vw, 16px);
     font-weight:600;
     color: var(--fg-soft);
     text-transform:uppercase;
     letter-spacing:0.5px;
   }
   .zman .time{
-    font-size: clamp(22px, 3vw, 42px);
+    font-size: clamp(16px, 2.1vw, 30px);
     font-weight:800;
-    margin-top:0.3vh;
+    margin-top:0.25vh;
     font-variant-numeric: tabular-nums;
   }
   .zman.highlight{ border-color: var(--accent); border-width:3px; }
@@ -249,8 +274,8 @@
     <div class="zman"><div class="label">Sof Zman Tefila</div><div class="time" id="z-tefila">--:--</div></div>
     <div class="zman"><div class="label">Chatzos</div><div class="time" id="z-chatzos">--:--</div></div>
     <div class="zman"><div class="label">Mincha Ketana</div><div class="time" id="z-mincha">--:--</div></div>
-    <div class="zman highlight"><div class="label" id="z-candle-label">Candle Lighting</div><div class="time" id="z-candle">--:--</div></div>
-    <div class="zman highlight"><div class="label" id="z-havdalah-label">Havdalah</div><div class="time" id="z-havdalah">--:--</div></div>
+    <div class="zman"><div class="label" id="z-candle-label">Shkiah (Sunset)</div><div class="time" id="z-candle">--:--</div></div>
+    <div class="zman"><div class="label" id="z-havdalah-label">Tzeit Hakochavim</div><div class="time" id="z-havdalah">--:--</div></div>
   </div>
 
   <div id="footer">Kiryas Joel (Monroe), NY &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
@@ -271,8 +296,11 @@
     <label>Candle lighting — minutes before sunset</label>
     <input type="number" id="candleMinInput" min="10" max="40" value="18">
 
-    <label>Havdalah — minutes after sunset</label>
+    <label>Havdalah (Motzei Shabbos / Yom Tov) — minutes after sunset</label>
     <input type="number" id="havdalahMinInput" min="30" max="90" value="72">
+
+    <label>Tzeit Hakochavim (regular weeknight nightfall) — minutes after sunset</label>
+    <input type="number" id="tzeitMinInput" min="20" max="60" value="45">
 
     <label>Theme</label>
     <div class="row">
@@ -296,7 +324,7 @@
 <script>
 /* ===================== App configuration ===================== */
 const LAT = 41.3307, LON = -74.1868;
-const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, theme: 'auto' };
+const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto' };
 
 function loadSettings(){
   try {
@@ -366,11 +394,20 @@ function computeDayState(now){
   const dow = now.getDay(); // 0=Sun..6=Sat
   const isFriday = dow === 5;
   const isSaturday = dow === 6;
-  const erevSomething = isFriday || (holidayTomorrow && holidayTomorrow.category === 'yomtov' && holidayTomorrow.dayNum === 1);
+  // "continuingIntoYomTov" covers both a fresh Yom Tov starting tomorrow AND a
+  // chag-to-chag transition (e.g. Rosh Hashanah day1->day2, Sukkot->Shemini
+  // Atzeret, Shemini Atzeret->Simchat Torah) — those nights get candle
+  // lighting, not a full Havdalah, even when today happens to be Shabbat.
+  const continuingIntoYomTov = !!(holidayTomorrow && holidayTomorrow.category === 'yomtov');
+  const erevSomething = isFriday || continuingIntoYomTov;
+  const isHolidayEndingTonight = !!(holiday && holiday.category === 'yomtov' && holiday.dayNum === holiday.totalDays);
+  const havdalahTonight = (isSaturday || isHolidayEndingTonight) && !continuingIntoYomTov;
   const inHolyTime = isSaturday || (holiday && holiday.category === 'yomtov');
 
-  return { jdnToday, hebrewJdn, hebDate, holiday, holidayTomorrow, omer, zmanToday, isFriday, isSaturday, erevSomething, inHolyTime };
+  return { jdnToday, hebrewJdn, hebDate, holiday, holidayTomorrow, omer, zmanToday, isFriday, isSaturday, erevSomething, havdalahTonight, inHolyTime };
 }
+
+const YOMTOV_GREETING = 'א פרייליכן יום טוב פון משפחת ניימאן';
 
 function renderBanner(state){
   let html = '';
@@ -380,7 +417,8 @@ function renderBanner(state){
     if (state.isSaturday && (!state.holiday || state.holiday.category!=='yomtov')) {
       html = 'Shabbat Shalom <span class="sub">May you have a peaceful and restful Shabbos</span>';
     } else if (state.holiday) {
-      html = `${state.holiday.name} <span class="sub">${state.holiday.totalDays>1 ? 'Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : ''}</span>`;
+      const dayLine = state.holiday.totalDays>1 ? 'Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : '';
+      html = `${state.holiday.name} <span class="sub">${dayLine}${dayLine ? ' &middot; ' : ''}${YOMTOV_GREETING}</span>`;
     }
   } else if (state.erevSomething && state.zmanToday) {
     show = true;
@@ -388,7 +426,8 @@ function renderBanner(state){
     html = `${label} <span class="sub">Candle Lighting at ${state.zmanToday.candleLighting.text}</span>`;
   } else if (state.holiday) {
     show = true;
-    html = `${state.holiday.name}${state.holiday.totalDays>1 ? ' — Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : ''}`;
+    const dayLine = state.holiday.totalDays>1 ? 'Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : '';
+    html = `${state.holiday.name} <span class="sub">${dayLine}${dayLine ? ' &middot; ' : ''}${state.holiday.category==='yomtov' ? YOMTOV_GREETING : ''}</span>`;
   }
   bannerEl.innerHTML = html;
   bannerEl.classList.toggle('show', show);
@@ -405,10 +444,15 @@ function renderOmer(state){
 
 function renderDates(now, state){
   engDateEl.textContent = `${DOW_NAMES[now.getDay()]}, ${MONTH_NAMES_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+  dowEl.textContent = HebrewEngine.YIDDISH_DAYS[now.getDay()];
+  dowEl.classList.toggle('yomtov', !!state.inHolyTime);
+
   const hd = state.hebDate;
   const dayStr = HebrewEngine.hebrewNumeral(hd.day);
   const yearStr = HebrewEngine.hebrewYearString(hd.year);
   hebDateEl.textContent = `${dayStr} ${hd.monthNameHebrew} ${yearStr}`;
+  hebDateEl.classList.toggle('yomtov', !!state.inHolyTime);
   hebDateLatinEl.textContent = `${hd.day} ${hd.monthName} ${hd.year}`;
 }
 
@@ -423,20 +467,33 @@ function renderZmanim(state){
   set('z-chatzos', z.chatzos);
   set('z-mincha', z.minchaKetana);
 
+  // Sunset box: "Candle Lighting" only on Friday / erev Yom Tov; otherwise plain "Shkiah" (Sunset)
   const candleLabel = document.getElementById('z-candle-label');
+  const candleValueEl = document.getElementById('z-candle');
+  const candleBox = candleValueEl.closest('.zman');
+  if (state.erevSomething) {
+    candleLabel.textContent = state.holidayTomorrow ? 'Candle Lighting (' + state.holidayTomorrow.name + ')' : 'Candle Lighting';
+    candleValueEl.textContent = z.candleLighting.text;
+    candleBox.classList.add('highlight');
+  } else {
+    candleLabel.textContent = 'Shkiah (Sunset)';
+    candleValueEl.textContent = z.shkiah.text;
+    candleBox.classList.remove('highlight');
+  }
+
+  // Nightfall box: "Havdalah" only Motzei Shabbos / Motzei Yom Tov; otherwise plain "Tzeit Hakochavim"
   const havdalahLabel = document.getElementById('z-havdalah-label');
-  if (state.holidayTomorrow && state.holidayTomorrow.category==='yomtov') {
-    candleLabel.textContent = 'Candle Lighting (' + state.holidayTomorrow.name + ')';
+  const havdalahValueEl = document.getElementById('z-havdalah');
+  const havdalahBox = havdalahValueEl.closest('.zman');
+  if (state.havdalahTonight) {
+    havdalahLabel.textContent = (state.holiday && state.holiday.category==='yomtov') ? state.holiday.name + ' Ends' : 'Havdalah';
+    havdalahValueEl.textContent = z.havdalah.text;
+    havdalahBox.classList.add('highlight');
   } else {
-    candleLabel.textContent = 'Candle Lighting';
+    havdalahLabel.textContent = 'Tzeit Hakochavim';
+    havdalahValueEl.textContent = z.tzeitHakochavim.text;
+    havdalahBox.classList.remove('highlight');
   }
-  if (state.holiday && state.holiday.category==='yomtov') {
-    havdalahLabel.textContent = state.holiday.name + ' Ends';
-  } else {
-    havdalahLabel.textContent = 'Havdalah';
-  }
-  set('z-candle', z.candleLighting);
-  set('z-havdalah', z.havdalah);
 }
 
 function applyTheme(now, state){
@@ -477,16 +534,19 @@ const gearBtn = document.getElementById('gearBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const candleMinInput = document.getElementById('candleMinInput');
 const havdalahMinInput = document.getElementById('havdalahMinInput');
+const tzeitMinInput = document.getElementById('tzeitMinInput');
 
 function openSettings(){
   candleMinInput.value = settings.candleLightingMinutes;
   havdalahMinInput.value = settings.havdalahMinutes;
+  tzeitMinInput.value = settings.tzeitMinutes;
   settingsPanel.classList.add('show');
 }
 gearBtn.addEventListener('click', openSettings);
 document.getElementById('closeSettings').addEventListener('click', () => {
   settings.candleLightingMinutes = parseInt(candleMinInput.value, 10) || DEFAULTS.candleLightingMinutes;
   settings.havdalahMinutes = parseInt(havdalahMinInput.value, 10) || DEFAULTS.havdalahMinutes;
+  settings.tzeitMinutes = parseInt(tzeitMinInput.value, 10) || DEFAULTS.tzeitMinutes;
   saveSettings(settings);
   cachedDayKey = null; // force recompute
   settingsPanel.classList.remove('show');
@@ -504,14 +564,18 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('syncStatus');
   statusEl.textContent = 'Checking for updates…';
   try {
+    // Confirm we actually have a live connection by re-fetching this page
+    // (bypassing any cache). The service worker is already network-first,
+    // so this also refreshes every cached file in the background.
+    await fetch('./index.html', { cache: 'no-store' });
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg) await reg.update();
     }
     const now = new Date();
     localStorage.setItem('lastSync', now.toISOString());
-    statusEl.textContent = 'Synced at ' + now.toLocaleString();
-    updateLastSyncFooter();
+    statusEl.textContent = 'Up to date! Reloading…';
+    setTimeout(() => window.location.reload(), 700);
   } catch (e) {
     statusEl.textContent = 'Could not sync — check Wi-Fi connection.';
   }
