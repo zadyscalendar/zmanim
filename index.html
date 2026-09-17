@@ -363,7 +363,6 @@ function renderClock(now){
   let h12 = h % 12; if (h12===0) h12 = 12;
   clockEl.firstChild.textContent = `${h12}:${pad2(m)}`;
   ampmEl.textContent = ampm;
-  dowEl.textContent = DOW_NAMES[now.getDay()];
 }
 
 function dateToLocalMinutes(minutesLocal){
@@ -663,6 +662,22 @@ function buildPrintCalendar(){
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+
+  // Whenever a newer service worker takes over — which now happens
+  // automatically the moment this tablet is online, thanks to the
+  // network-first strategy — reload once so the newest version of the app
+  // is actually shown, instead of leaving an old version running silently
+  // in the background until someone manually closes and reopens it.
+  let hasReloaded = false;
+  function reloadOnce(){
+    if (hasReloaded) return;
+    hasReloaded = true;
+    window.location.reload();
+  }
+  navigator.serviceWorker.addEventListener('controllerchange', reloadOnce);
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SW_UPDATED') reloadOnce();
   });
 }
 </script>
