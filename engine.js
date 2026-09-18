@@ -176,7 +176,7 @@ const HebrewEngine = (function () {
   }
 
   // Yiddish day-of-week names (index matches JS Date.getDay(): 0=Sunday..6=Saturday)
-  const YIDDISH_DAYS = ['זונטיק', 'מאנטיק', 'דינסטיק', 'מיטוואך', 'דאנערשטיק', 'פרייטיק', 'שבת קודש'];
+  const YIDDISH_DAYS = ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת'];
 
   // ---------- Public API ----------
   return {
@@ -443,13 +443,29 @@ const ZmanimEngine = (function () {
     const candleLightingMin = shkiahMin - candleMin;
 
     // --- format for display ---
+    const showSeconds = !!settings.showSeconds;
     const toLocal = (utcMin) => { let local = utcMin + tzOffsetHours * 60; return ((local % 1440) + 1440) % 1440; };
     const fmt = (utcMin) => {
       if (utcMin == null) return null;
-      const local = toLocal(utcMin);
-      const h = Math.floor(local / 60), mi = Math.round(local % 60);
+      let local = toLocal(utcMin);
+      let h = Math.floor(local / 60);
+      let remMin = local - h * 60; // fractional minutes remaining, 0..60
+      let mi, ss;
+      if (showSeconds) {
+        mi = Math.floor(remMin);
+        ss = Math.round((remMin - mi) * 60);
+        if (ss === 60) { ss = 0; mi += 1; }
+      } else {
+        mi = Math.round(remMin);
+        ss = null;
+      }
+      if (mi === 60) { mi = 0; h += 1; }
+      h = ((h % 24) + 24) % 24;
       let h12 = h % 12; if (h12 === 0) h12 = 12;
-      return { text: `${h12}:${String(mi).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`, minutesLocal: local };
+      const text = showSeconds
+        ? `${h12}:${String(mi).padStart(2, '0')}:${String(ss).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+        : `${h12}:${String(mi).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+      return { text, minutesLocal: local };
     };
 
     return {

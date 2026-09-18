@@ -54,3 +54,19 @@ self.addEventListener('fetch', (event) => {
       )
   );
 });
+
+// Tapping "✓ Mark Complete" (or the notification itself) just dismisses it.
+// The notification is already recorded as sent in the app's own persisted
+// log the moment it was shown, so it won't be sent again today regardless —
+// this button is there so the person has a clear, deliberate way to
+// acknowledge and clear it, rather than only being able to "snooze" it.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'complete' || !event.action) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        if (clients.length > 0) return clients[0].focus();
+      })
+    );
+  }
+});

@@ -280,6 +280,44 @@
   #settingsCard button.secondary{ background:#fff; color:#173d6b; }
   #settingsCard .hint{ color:#555; font-size:15px; line-height:1.4; }
 
+  /* ---------- Notifications section (bigger, clearer) ---------- */
+  .notifStepBox{
+    background:#f4f6f9; border:2px solid #dfe4ea; border-radius:14px;
+    padding:16px; margin:14px 0;
+  }
+  .notifStepTitle{ font-weight:700; font-size:17px; margin-bottom:10px; }
+  .notifBadge{
+    display:inline-block; font-size:15px; font-weight:700; padding:8px 14px;
+    border-radius:999px; margin-bottom:12px;
+  }
+  .notifBadge.on{ background:#1e8a4c; color:#fff; }
+  .notifBadge.off{ background:#c0392b; color:#fff; }
+  .notifBadge.unknown{ background:#8a8f98; color:#fff; }
+  #enableNotifBtn.bigBtn{
+    display:block; width:100%; font-size:20px; padding:16px; font-weight:700;
+    border-radius:12px;
+  }
+  .notifRow{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border:2px solid #e2e6ec; border-radius:10px;
+    padding:12px 14px; margin-bottom:8px;
+  }
+  .notifRowLabel{ display:flex; flex-direction:column; gap:2px; }
+  .notifRowEn{ font-size:16px; font-weight:700; color:#111; }
+  .notifRowHe{ font-size:14px; color:#666; direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; }
+  .toggleSwitch{ position:relative; display:inline-block; width:56px; height:32px; flex:0 0 auto; }
+  .toggleSwitch input{ opacity:0; width:0; height:0; }
+  .toggleSlider{
+    position:absolute; inset:0; background:#c7ccd4; border-radius:32px;
+    cursor:pointer; transition:.2s;
+  }
+  .toggleSlider:before{
+    position:absolute; content:""; height:26px; width:26px; left:3px; bottom:3px;
+    background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .toggleSwitch input:checked + .toggleSlider{ background:#173d6b; }
+  .toggleSwitch input:checked + .toggleSlider:before{ transform: translateX(24px); }
+
   /* ---------- First-time setup wizard ---------- */
   #setupModal{
     display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200;
@@ -336,64 +374,67 @@
   #calendarModal{
     display:none;
     position:fixed; inset:0;
-    background: rgba(0,0,0,0.6);
+    background: var(--bg);
     z-index: 90;
-    align-items:center; justify-content:center;
   }
-  #calendarModal.show{ display:flex; }
+  #calendarModal.show{ display:block; }
   #calendarCard{
-    background: var(--panel); color: var(--fg);
-    width:min(1000px, 95vw);
-    max-height:92vh;
-    border-radius:18px;
-    padding: 2vh 2vw;
+    background: var(--bg); color: var(--fg);
+    width:100vw; height:100vh; height:100dvh;
+    padding: 2vh 3vw;
     display:flex; flex-direction:column;
-    gap: 1.4vh;
+    gap: 1.6vh;
+    box-sizing: border-box;
   }
   #calendarHeader{
-    display:flex; align-items:center; justify-content:center; gap:2vw;
-    position:relative;
+    display:flex; align-items:center; gap:2vw;
+    flex: 0 0 auto;
   }
-  #calendarTitle{ text-align:center; }
-  #calMonthEn{ font-size: clamp(22px, 3vw, 36px); font-weight:800; }
-  #calMonthHe{ font-size: clamp(16px, 2vw, 24px); direction:rtl; color: var(--fg-soft); font-family:"Times New Roman","Arial Hebrew",serif; }
-  .navBtn{
-    font-size: clamp(20px, 2.6vw, 30px);
+  #calBackBtn{
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight:700;
     background: var(--panel); color: var(--fg);
-    border: 2px solid var(--line); border-radius: 10px;
-    padding: 0.4em 0.7em; cursor:pointer;
+    border: 2px solid var(--line); border-radius: 12px;
+    padding: 0.5em 1em; cursor:pointer;
+    flex: 0 0 auto;
   }
-  #calCloseBtn{
-    position:absolute; right:0; top:50%; transform:translateY(-50%);
-    font-size: clamp(20px, 2.4vw, 28px);
-    background:transparent; border:none; color: var(--fg); cursor:pointer;
+  #calendarTitle{ text-align:center; flex: 1 1 auto; }
+  #calMonthEn{ font-size: clamp(28px, 4.2vw, 48px); font-weight:800; }
+  #calMonthHe{ font-size: clamp(18px, 2.6vw, 30px); direction:rtl; color: var(--fg-soft); font-family:"Times New Roman","Arial Hebrew",serif; }
+  .navBtn{
+    font-size: clamp(24px, 3vw, 36px);
+    background: var(--panel); color: var(--fg);
+    border: 2px solid var(--line); border-radius: 12px;
+    padding: 0.3em 0.6em; cursor:pointer;
+    flex: 0 0 auto;
   }
   #calendarGrid{
     display:grid; grid-template-columns: repeat(7, 1fr);
-    gap: 0.6vh 0.5vw;
+    gap: 0.8vh 0.6vw;
     overflow-y:auto;
+    flex: 1 1 auto;
   }
   .calDowHead{
-    text-align:center; font-weight:700; font-size: clamp(12px, 1.4vw, 18px);
-    color: var(--fg-soft); padding-bottom: 0.3vh;
+    text-align:center; font-weight:700; font-size: clamp(14px, 1.8vw, 22px);
+    color: var(--fg-soft); padding-bottom: 0.4vh;
   }
   .calDay{
-    border: 2px solid var(--line); border-radius: 10px;
-    padding: 0.5vh 0.4vw;
-    min-height: 11vh;
-    background: var(--bg);
+    border: 2px solid var(--line); border-radius: 12px;
+    padding: 0.8vh 0.5vw;
+    min-height: 12vh;
+    background: var(--panel);
     display:flex; flex-direction:column;
     cursor:pointer; position:relative;
   }
-  .calNoteDot{ position:absolute; top:4px; right:4px; width:7px; height:7px; border-radius:50%; background:var(--accent); }
+  .calNoteDot{ position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--accent); }
   .calDay.empty{ visibility:hidden; cursor:default; }
-  .calDay.today{ border-color: var(--accent); border-width:3px; }
-  .calDay.holiday{ background: rgba(23,61,107,0.08); }
-  [data-theme="night"] .calDay.holiday{ background: rgba(231,217,168,0.10); }
-  .calNum{ font-weight:800; font-size: clamp(14px, 1.7vw, 22px); }
-  .calHeb{ font-size: clamp(10px, 1.1vw, 14px); color: var(--fg-soft); direction:rtl; }
-  .calHoliday{ font-size: clamp(10px, 1.15vw, 14px); font-weight:700; color: var(--accent); margin-top:auto; }
-  .calZman{ font-size: clamp(9px, 1vw, 13px); color: var(--fg-soft); }
+  .calDay.today{ border-color: var(--accent); border-width:4px; }
+  .calDay.holiday{ background: rgba(23,61,107,0.10); }
+  [data-theme="night"] .calDay.holiday{ background: rgba(231,217,168,0.13); }
+  .calNum{ font-weight:800; font-size: clamp(18px, 2.2vw, 28px); }
+  .calHeb{ font-size: clamp(12px, 1.4vw, 17px); color: var(--fg-soft); direction:rtl; }
+  .calHoliday{ font-size: clamp(12px, 1.4vw, 17px); font-weight:700; color: var(--accent); margin-top:auto; }
+  .calZman{ font-size: clamp(11px, 1.2vw, 15px); color: var(--fg-soft); }
 
   /* ---------- Day detail modal (reminders, per-day zmanim, single-day print) ---------- */
   #dayDetailModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:95; align-items:center; justify-content:center; }
@@ -478,13 +519,13 @@
 <div id="calendarModal">
   <div id="calendarCard">
     <div id="calendarHeader">
+      <button id="calBackBtn" aria-label="Back">← Back</button>
       <button id="calPrevBtn" class="navBtn">◀</button>
       <div id="calendarTitle">
         <div id="calMonthEn">Month Year</div>
         <div id="calMonthHe">Hebrew Month Year</div>
       </div>
       <button id="calNextBtn" class="navBtn">▶</button>
-      <button id="calCloseBtn" aria-label="Close Calendar">✕</button>
     </div>
     <div id="calendarGrid"></div>
   </div>
@@ -577,17 +618,38 @@
     <input type="number" id="elevationInput" min="0" max="5000" value="0" placeholder="meters">
 
     <label>🔔 Notifications</label>
-    <div class="row">
-      <button id="enableNotifBtn">Enable Notifications</button>
-      <span id="notifPermStatus" class="hint"></span>
-    </div>
-    <p class="hint">
-      Choose which zmanim should notify you. This works while the app is
-      open or recently open in the background — it may not fire if the app
-      has been fully closed a long time (especially on iPhone), since that
-      would need a paid push-notification server, which this app doesn't use.
+    <p class="hint" style="margin-bottom:10px;">
+      Get a notification on this device when a zman arrives, or when a
+      reminder you added is due. Works best while the app is open or
+      recently open — it may not fire if the app has been fully closed a
+      long time (especially on iPhone), since reliable delivery then would
+      need a paid push-notification server, which this app doesn't use.
     </p>
-    <div id="notifSettingsList"></div>
+
+    <div class="notifStepBox">
+      <div class="notifStepTitle">Step 1 — Turn on notifications for this device</div>
+      <div id="notifPermStatus" class="notifBadge">Checking…</div>
+      <button id="enableNotifBtn" class="bigBtn">🔔 Enable Notifications</button>
+      <p class="hint" style="margin-top:10px;">
+        After tapping this, your phone will ask permission — please allow it.
+        Then check one more place so notifications can reach you even when
+        you're not sitting in the app: on <strong>iPhone</strong>, go to
+        Settings → Safari (or Chrome) → Notifications → make sure it's
+        allowed. On <strong>Android</strong>, go to Settings → Apps → this
+        app (or your browser) → Notifications → make sure it's turned on.
+        If that system-level switch is off, notifications won't come
+        through no matter what's set here.
+      </p>
+    </div>
+
+    <div class="notifStepBox">
+      <div class="notifStepTitle">Step 2 — Choose which zmanim should notify you</div>
+      <div class="row" style="margin:8px 0 4px;">
+        <button id="notifSelectAllBtn" class="secondary">Turn On All</button>
+        <button id="notifClearAllBtn" class="secondary">Turn Off All</button>
+      </div>
+      <div id="notifSettingsList"></div>
+    </div>
 
     <label>Theme</label>
     <div class="row">
@@ -1007,23 +1069,41 @@ function renderTodayReminder(now){
   }
 }
 
-/* ===================== Notifications (best-effort; app must be open/recently open) ===================== */
-const firedToday = new Set();
-let firedTodayKey = null;
+/* ===================== Notifications (best-effort; app must be open/recently open) =====================
+   "Fired" tracking is saved to localStorage (not just an in-memory variable) —
+   that's the fix for notifications re-sending every time the app is reopened:
+   before this, closing and reopening the app wiped the in-memory record of
+   what had already been sent today, so the same zman could notify you again
+   the moment you came back in. Now it's remembered across reloads, for the
+   whole day, no matter how many times the app is closed and reopened. */
+function loadFiredLog(){ try { return JSON.parse(localStorage.getItem('firedNotifications') || '{}'); } catch(e){ return {}; } }
+function saveFiredLog(log){ try { localStorage.setItem('firedNotifications', JSON.stringify(log)); } catch(e){} }
+let firedLog = loadFiredLog();
+
+function hasFired(todayKey, fireKey){ return !!(firedLog[todayKey] && firedLog[todayKey].includes(fireKey)); }
+function markFired(todayKey, fireKey){
+  if (!firedLog[todayKey]) firedLog[todayKey] = [];
+  if (!firedLog[todayKey].includes(fireKey)) firedLog[todayKey].push(fireKey);
+  Object.keys(firedLog).forEach((k) => { if (k !== todayKey) delete firedLog[k]; }); // keep the log from growing forever
+  saveFiredLog(firedLog);
+}
 
 function fireIfDue(key, minutesLocal, label, todayKey, nowMin){
   if (minutesLocal == null) return;
   const fireKey = todayKey + ':' + key;
-  if (firedToday.has(fireKey)) return;
+  if (hasFired(todayKey, fireKey)) return;
   if (nowMin >= minutesLocal && nowMin - minutesLocal < 2) {
     sendNotification('Zman', label);
-    firedToday.add(fireKey);
+    markFired(todayKey, fireKey);
   }
 }
 function sendNotification(title, body){
   try {
     if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, { body, icon: 'icon-192.png' })).catch(() => { new Notification(title, { body }); });
+      navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, {
+        body, icon: 'icon-192.png',
+        actions: [{ action: 'complete', title: '✓ Mark Complete' }]
+      })).catch(() => { new Notification(title, { body }); });
     } else {
       new Notification(title, { body });
     }
@@ -1031,7 +1111,6 @@ function sendNotification(title, body){
 }
 function checkNotifications(now, state){
   const todayKey = dateKey(now.getFullYear(), now.getMonth()+1, now.getDate());
-  if (firedTodayKey !== todayKey) { firedToday.clear(); firedTodayKey = todayKey; }
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!state.zmanToday || !settings.notifyZmanim) return;
 
@@ -1057,10 +1136,10 @@ function checkNotifications(now, state){
   notesFor(todayKey).forEach((n) => {
     if (!n.notify || !n.time) return;
     const fireKey = todayKey + ':note:' + n.id;
-    if (firedToday.has(fireKey)) return;
+    if (hasFired(todayKey, fireKey)) return;
     const [hh, mm] = n.time.split(':').map((x) => parseInt(x, 10));
     const noteMin = hh * 60 + mm;
-    if (nowMin >= noteMin && nowMin - noteMin < 2) { sendNotification('Reminder', n.text); firedToday.add(fireKey); }
+    if (nowMin >= noteMin && nowMin - noteMin < 2) { sendNotification('Reminder', n.text); markFired(todayKey, fireKey); }
   });
 }
 
@@ -1236,26 +1315,44 @@ function openSettings(){
   document.getElementById('showSecondsToggle').checked = !!settings.showSeconds;
   buildZmanSettingsUI();
   buildNotifSettingsUI();
-  document.getElementById('notifPermStatus').textContent = ('Notification' in window) ? (Notification.permission === 'granted' ? 'Enabled ✓' : 'Not enabled') : 'Not supported on this device';
+  updateNotifPermBadge();
   updateLocationStatus();
   updateHomeButton();
   settingsPanel.classList.add('show');
 }
+function updateNotifPermBadge(){
+  const badge = document.getElementById('notifPermStatus');
+  if (!('Notification' in window)) {
+    badge.textContent = 'Not supported on this device';
+    badge.className = 'notifBadge unknown';
+  } else if (Notification.permission === 'granted') {
+    badge.textContent = '✓ Notifications are ON for this device';
+    badge.className = 'notifBadge on';
+  } else {
+    badge.textContent = '✗ Notifications are OFF — tap the button below';
+    badge.className = 'notifBadge off';
+  }
+}
 document.getElementById('enableNotifBtn').addEventListener('click', () => {
-  if (!('Notification' in window)) { document.getElementById('notifPermStatus').textContent = 'Not supported on this device.'; return; }
-  Notification.requestPermission().then((perm) => {
-    document.getElementById('notifPermStatus').textContent = perm === 'granted' ? 'Enabled ✓' : 'Not enabled';
-  });
+  if (!('Notification' in window)) { updateNotifPermBadge(); return; }
+  Notification.requestPermission().then(() => updateNotifPermBadge());
 });
 function buildNotifSettingsUI(){
   const defs = ZmanimEngine.ZMAN_DEFS;
   const container = document.getElementById('notifSettingsList');
   const keys = ZMAN_ORDER.concat(['candle', 'havdalah']);
-  const labelFor = (k) => (k === 'candle') ? 'Sunset / Candle Lighting' : (k === 'havdalah') ? 'Nightfall / Havdalah' : defs[k].label;
+  const enLabelFor = (k) => (k === 'candle') ? 'Sunset / Candle Lighting' : (k === 'havdalah') ? 'Nightfall / Havdalah' : defs[k].label;
+  const heLabelFor = (k) => (k === 'candle') ? 'שקיעה / הדלקת נרות' : (k === 'havdalah') ? 'צאת הכוכבים / הבדלה' : defs[k].hebrew;
   container.innerHTML = keys.map((k) => `
-    <div class="zSettingRow">
-      <input type="checkbox" data-notify="${k}">
-      <span class="zName">${labelFor(k)}</span>
+    <div class="notifRow">
+      <div class="notifRowLabel">
+        <div class="notifRowEn">${enLabelFor(k)}</div>
+        <div class="notifRowHe">${heLabelFor(k)}</div>
+      </div>
+      <label class="toggleSwitch">
+        <input type="checkbox" data-notify="${k}">
+        <span class="toggleSlider"></span>
+      </label>
     </div>`).join('');
   container.querySelectorAll('input[data-notify]').forEach((cb) => {
     const key = cb.getAttribute('data-notify');
@@ -1263,6 +1360,14 @@ function buildNotifSettingsUI(){
     cb.addEventListener('change', () => { settings.notifyZmanim[key] = cb.checked; saveSettings(settings); });
   });
 }
+document.getElementById('notifSelectAllBtn').addEventListener('click', () => {
+  Object.keys(settings.notifyZmanim).forEach((k) => settings.notifyZmanim[k] = true);
+  saveSettings(settings); buildNotifSettingsUI();
+});
+document.getElementById('notifClearAllBtn').addEventListener('click', () => {
+  Object.keys(settings.notifyZmanim).forEach((k) => settings.notifyZmanim[k] = false);
+  saveSettings(settings); buildNotifSettingsUI();
+});
 gearBtn.addEventListener('click', openSettings);
 document.getElementById('useKjBtn').addEventListener('click', goHome);
 document.getElementById('useMyLocationBtn').addEventListener('click', () => refreshLocation(false));
@@ -1485,7 +1590,7 @@ function renderCalendarMonth(){
 }
 
 document.getElementById('calendarBtn').addEventListener('click', openCalendar);
-document.getElementById('calCloseBtn').addEventListener('click', closeCalendar);
+document.getElementById('calBackBtn').addEventListener('click', closeCalendar);
 document.getElementById('calPrevBtn').addEventListener('click', calPrevMonth);
 document.getElementById('calNextBtn').addEventListener('click', calNextMonth);
 document.getElementById('calendarModal').addEventListener('click', (e) => {
