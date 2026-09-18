@@ -565,59 +565,71 @@
 
   /* ---------- Day detail modal (reminders, per-day zmanim, single-day print) ---------- */
   /* =====================================================================
-     Day detail / reminders — redesigned to match the Luach calendar's
-     clean, professional look (this screen is only reachable from that
-     calendar now, in "Normal Calendar" mode, so it always uses that same
-     fixed light palette rather than the wall clock's day/night theme).
+     Day detail / Add Reminder — a real modal dialog over the calendar,
+     matching the reference design's structure but using the app's own
+     consistent navy/amber palette instead of a different color per zman.
      ===================================================================== */
-  #dayDetailModal{ display:none; position:fixed; inset:0; background:#f7f5ef; z-index:95; }
-  #dayDetailModal.show{ display:block; }
+  #dayDetailModal{ display:none; position:fixed; inset:0; background:rgba(20,22,26,0.55); z-index:95; align-items:center; justify-content:center; }
+  #dayDetailModal.show{ display:flex; }
   #dayDetailCard{
-    color:#161616;
-    width:100vw; height:100vh; height:100dvh; overflow-y:auto;
-    padding: 0; box-sizing:border-box;
+    background:#fff; color:#161616;
+    width:min(640px, 92vw); max-height:88vh; overflow-y:auto;
+    border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.25);
   }
-  #dayDetailTopBar{
-    position:sticky; top:0; z-index:5;
-    background:#fff; color:#161616; border-bottom:1px solid #e3e6ea;
-    display:flex; align-items:center; gap:14px; padding:14px 20px;
-  }
-  #dayDetailBackBtn{
-    background:#f2f4f7; color:#161616; border:1px solid #e3e6ea; border-radius:10px;
-    font-size:15px; font-weight:700; padding:10px 16px; cursor:pointer;
-  }
-  #dayDetailBody{ padding: 24px 5vw 60px; max-width:720px; margin:0 auto; }
-  #dayDetailTitle{ margin: 0 0 4px; font-size: clamp(24px,3.4vw,32px); font-weight:800; }
-  #dayDetailHeb{ direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; font-size: clamp(16px,1.9vw,20px); color:#999; }
-  #dayDetailHoliday{ font-weight:700; color:#7a5b00; margin-top:8px; font-size: clamp(15px,1.7vw,18px); }
+  #ddAccentBar{ height:6px; background:#173d6b; border-radius:16px 16px 0 0; }
+  #ddHeaderRow{ display:flex; align-items:center; justify-content:space-between; padding:18px 22px 10px; }
+  #dayDetailTitle{ font-size: clamp(19px,2.4vw,23px); font-weight:700; }
+  #dayDetailBackBtn{ background:none; border:none; color:#8a8f98; font-size:20px; cursor:pointer; line-height:1; padding:4px; }
+  #dayDetailBackBtn:hover{ color:#333; }
+  #dayDetailHoliday{ padding:0 22px 10px; font-weight:700; color:#7a5b00; font-size:14.5px; }
 
-  .ddCard{ background:#fff; border:1px solid #e3e6ea; border-radius:14px; padding:18px 20px; margin-top:20px; }
-  .ddCardTitle{ font-weight:800; font-size:16px; margin-bottom:12px; color:#161616; }
+  #dayDetailBody{ padding: 4px 22px 22px; }
+  .ddSectionLabel{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:#999; margin:14px 0 10px; }
+  .ddDivider{ border:none; border-top:1px solid #eef0f3; margin:18px 0; }
 
-  #dayDetailZmanim .dRow{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid #eef0f3; direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; font-size:14.5px; }
-  #dayDetailZmanim .dRow:last-child{ border-bottom:none; }
-  #dayDetailZmanim .dRow span:last-child{ direction:ltr; font-variant-numeric:tabular-nums; font-weight:800; font-size:15.5px; color:#161616; }
+  #dayDetailZmanim{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .zChip{ display:flex; justify-content:space-between; align-items:center; background:#eef0f3; border-radius:8px; padding:10px 12px; font-size:13.5px; }
+  .zChip .zChipTime{ font-weight:800; font-variant-numeric:tabular-nums; color:#161616; }
+  .zChip.zChipHighlight{ background:#fdf1d6; }
+  .zChip.zChipHighlight .zChipTime{ color:#7a5b00; }
 
-  #dayNotesList .noteRow{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:11px 12px; margin-bottom:8px; background:#eef0f3; border-radius:10px; }
+  #ddExistingNotesWrap.hidden{ display:none; }
+  #dayNotesList .noteRow{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; margin-bottom:6px; background:#eef0f3; border-radius:8px; }
   #dayNotesList .noteRow:last-child{ margin-bottom:0; }
-  #dayNotesList .noteText{ flex:1; white-space:pre-wrap; font-size:14.5px; color:#222; }
-  #dayNotesList .noteTime{ font-size:12.5px; color:#8a8f98; margin-top:3px; font-weight:600; }
-  #dayNotesList .noteDelBtn{ background:none; border:none; color:#c0392b; font-size:20px; cursor:pointer; padding:0 4px; line-height:1; }
+  #dayNotesList .noteText{ flex:1; white-space:pre-wrap; font-size:14px; color:#222; }
+  #dayNotesList .noteTime{ font-size:12px; color:#8a8f98; margin-top:3px; font-weight:600; }
+  #dayNotesList .noteDelBtn{ background:none; border:none; color:#c0392b; font-size:19px; cursor:pointer; padding:0 4px; line-height:1; }
 
-  #addNoteBox{ display:flex; flex-direction:column; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid #eef0f3; }
-  #dayNewNoteText{ font-size:15.5px; padding:12px 14px; border-radius:10px; border:1.5px solid #e3e6ea; background:#fbfcfd; color:#161616; }
+  #dayNewNoteText{
+    width:100%; box-sizing:border-box; font-size:15px; padding:12px 14px;
+    border-radius:10px; border:1.5px solid #e3e6ea; background:#fbfcfd; color:#161616;
+  }
   #dayNewNoteText:focus{ outline:none; border-color:#173d6b; }
-  .notifyRowInline{ display:flex; align-items:center; gap:12px; }
-  .notifyRowInlineLabel{ font-size:14.5px; font-weight:600; color:#333; }
-  #dayNewNoteTimeWrap{ padding:10px 12px; background:#eef0f3; border-radius:10px; }
+  .ddNotifyRow{ display:flex; align-items:center; justify-content:space-between; margin-top:16px; }
+  .ddNotifyLabel{ font-size:15px; font-weight:600; }
+  #dayNewNoteTimeWrap{ margin-top:10px; padding:10px 12px; background:#eef0f3; border-radius:10px; }
   #dayNewNoteTimeWrap.hidden{ display:none; }
   #dayNewNoteTime{ font-size:15px; padding:7px; border-radius:8px; border:1.5px solid #e3e6ea; }
-  #addNoteBox button{ border-radius:10px; border:none; background:#173d6b; color:#fff; padding:12px 16px; cursor:pointer; font-size:15px; font-weight:700; }
-  #addNoteBox button:hover{ background:#122e52; }
 
-  #printIncludeNotesRow{ display:flex; align-items:center; gap:12px; margin-top:16px; }
-  #printDayBtn{ margin-top:12px; width:100%; border-radius:10px; border:none; background:#c98a1f; color:#fff; padding:13px 18px; cursor:pointer; font-size:15.5px; font-weight:700; }
-  #printDayBtn:hover{ background:#b07817; }
+  #ddButtonsRow{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+  #printBtnWrap{ flex:1 1 auto; }
+  .ddSecondaryBtn{
+    width:100%; border-radius:10px; border:1.5px solid #e3e6ea; background:#f2f4f7; color:#333;
+    padding:13px 16px; cursor:pointer; font-size:14.5px; font-weight:700;
+  }
+  .ddSecondaryBtn:hover{ background:#e9ecf0; }
+  .ddPrimaryBtn{
+    flex:1 1 auto; border-radius:10px; border:none; background:#173d6b; color:#fff;
+    padding:13px 16px; cursor:pointer; font-size:14.5px; font-weight:700;
+  }
+  .ddPrimaryBtn:hover{ background:#122e52; }
+  #printConfirmRow{ display:flex; gap:8px; margin-top:8px; }
+  #printConfirmRow.hidden{ display:none; }
+  .ddTinyBtn{
+    flex:1 1 auto; border-radius:8px; border:1.5px solid #e3e6ea; background:#fff; color:#173d6b;
+    padding:9px 10px; cursor:pointer; font-size:12.5px; font-weight:700;
+  }
+  .ddTinyBtn:hover{ background:#f2f4f7; }
 
   /* ---------- Print view (hidden on screen) ---------- */
   #printArea{ display:none; }
@@ -721,43 +733,48 @@
 
 <div id="dayDetailModal">
   <div id="dayDetailCard">
-    <div id="dayDetailTopBar">
-      <button id="dayDetailBackBtn">← Back to Calendar</button>
+    <div id="ddAccentBar"></div>
+    <div id="ddHeaderRow">
+      <div id="dayDetailTitle"></div>
+      <button id="dayDetailBackBtn" aria-label="Close">✕</button>
     </div>
+    <div id="dayDetailHoliday"></div>
+
     <div id="dayDetailBody">
-      <h2 id="dayDetailTitle"></h2>
-      <div id="dayDetailHeb"></div>
-      <div id="dayDetailHoliday"></div>
+      <div class="ddSectionLabel">Today's Zmanim</div>
+      <div id="dayDetailZmanim"></div>
 
-      <div class="ddCard">
-        <div class="ddCardTitle">🕐 Zmanim for this day</div>
-        <div id="dayDetailZmanim"></div>
-      </div>
+      <hr class="ddDivider">
 
-      <div class="ddCard">
-        <div class="ddCardTitle">📌 Reminders for this day</div>
+      <div id="ddExistingNotesWrap">
+        <div class="ddSectionLabel">Your Reminders</div>
         <div id="dayNotesList"></div>
-        <div id="addNoteBox">
-          <input type="text" id="dayNewNoteText" placeholder="Add a reminder…">
-          <div class="notifyRowInline">
-            <label class="toggleSwitch"><input type="checkbox" id="dayNewNoteNotify"><span class="toggleSlider"></span></label>
-            <span class="notifyRowInlineLabel">🔔 Notify me about this reminder</span>
-          </div>
-          <div id="dayNewNoteTimeWrap" class="hidden">
-            <label for="dayNewNoteTime" style="margin:0 10px 0 0; display:inline;">At what time:</label>
-            <input type="time" id="dayNewNoteTime" value="09:00">
-          </div>
-          <button id="dayAddNoteBtn">Add Reminder</button>
-        </div>
+        <hr class="ddDivider">
       </div>
 
-      <div class="ddCard">
-        <div class="ddCardTitle">🖨️ Print</div>
-        <div id="printIncludeNotesRow">
-          <label class="toggleSwitch"><input type="checkbox" id="printIncludeNotes"><span class="toggleSlider"></span></label>
-          <label for="printIncludeNotes" style="margin:0;">Include my reminders in the printout</label>
+      <div class="ddSectionLabel">Add Reminder / Event</div>
+      <input type="text" id="dayNewNoteText" placeholder="Reminder title (e.g., Doctor's Appointment)">
+
+      <div class="ddNotifyRow">
+        <div class="ddNotifyLabel">🔔 Notify Me</div>
+        <label class="toggleSwitch"><input type="checkbox" id="dayNewNoteNotify"><span class="toggleSlider"></span></label>
+      </div>
+      <div id="dayNewNoteTimeWrap" class="hidden">
+        <label for="dayNewNoteTime">At what time:</label>
+        <input type="time" id="dayNewNoteTime" value="09:00">
+      </div>
+
+      <hr class="ddDivider">
+
+      <div id="ddButtonsRow">
+        <div id="printBtnWrap">
+          <button id="printDayBtn" class="ddSecondaryBtn">🖨️ Print Day &amp; Zmanim</button>
+          <div id="printConfirmRow" class="hidden">
+            <button id="printWithNotesBtn" class="ddTinyBtn">Yes, include reminders</button>
+            <button id="printNoNotesBtn" class="ddTinyBtn">Just zmanim</button>
+          </div>
         </div>
-        <button id="printDayBtn">🖨️ Print This Day</button>
+        <button id="dayAddNoteBtn" class="ddPrimaryBtn">Save Reminder</button>
       </div>
     </div>
   </div>
@@ -2086,12 +2103,12 @@ function dayDetailZmanRows(jsDate, holiday){
   ZMAN_ORDER.forEach((key) => {
     if (!settings.zmanShow[key]) return;
     const val = z[key];
-    rows.push({ label: ZmanimEngine.ZMAN_DEFS[key].hebrew, time: val ? val.text : '--:--' });
+    rows.push({ label: ZmanimEngine.ZMAN_DEFS[key].label, time: val ? val.text : '--:--', highlight: false });
   });
-  if (erevSomething) rows.push({ label: 'הדלקת נרות', time: z.candle.text });
-  else rows.push({ label: 'שקיעת החמה', time: z.shkiah.text });
-  if (havdalahTonight) rows.push({ label: 'הבדלה', time: z.havdalah.text });
-  else rows.push({ label: 'צאת הכוכבים', time: z.tzeisEveryday.text });
+  if (erevSomething) rows.push({ label: 'Candle Lighting', time: z.candle.text, highlight: true });
+  else rows.push({ label: 'Shkiah (Sunset)', time: z.shkiah.text, highlight: false });
+  if (havdalahTonight) rows.push({ label: 'Havdalah', time: z.havdalah.text, highlight: true });
+  else rows.push({ label: 'Tzeis Hakochavim', time: z.tzeisEveryday.text, highlight: false });
   return rows;
 }
 
@@ -2103,14 +2120,23 @@ function openDayDetail(y, m, d){
   const omer = HebrewEngine.getOmerDay(jdn, hebDate.year);
   const jsDate = new Date(y, m - 1, d);
 
-  document.getElementById('dayDetailTitle').textContent = `${DOW_NAMES[jsDate.getDay()]}, ${MONTH_NAMES_EN[m-1]} ${d}, ${y}`;
-  document.getElementById('dayDetailHeb').textContent = `${HebrewEngine.hebrewNumeral(hebDate.day)} ${hebDate.monthNameHebrew} ${HebrewEngine.hebrewYearString(hebDate.year)}`;
+  document.getElementById('dayDetailTitle').textContent =
+    `${DOW_NAMES[jsDate.getDay()]}, ${hebDate.day} ${hebDate.monthName} ${hebDate.year}`;
   document.getElementById('dayDetailHoliday').innerHTML = holiday
     ? `${holiday.name}${holiday.totalDays>1 ? ' — Day '+holiday.dayNum+' of '+holiday.totalDays : ''}${omer ? ` · Omer: ${omer}` : ''}`
-    : (omer ? `Omer: ${omer}` : '');
+    : (omer ? `Omer: Day ${omer}` : '');
+  document.getElementById('dayDetailHoliday').style.display = (holiday || omer) ? '' : 'none';
 
   const rows = dayDetailZmanRows(jsDate, holiday);
-  document.getElementById('dayDetailZmanim').innerHTML = rows.map((r) => `<div class="dRow"><span>${r.label}</span><span>${r.time}</span></div>`).join('');
+  document.getElementById('dayDetailZmanim').innerHTML = rows.map((r) =>
+    `<div class="zChip ${r.highlight?'zChipHighlight':''}"><span>${r.label}</span><span class="zChipTime">${r.time}</span></div>`).join('');
+
+  // reset the add-reminder form and print-confirm state each time it opens
+  document.getElementById('dayNewNoteText').value = '';
+  document.getElementById('dayNewNoteNotify').checked = false;
+  document.getElementById('dayNewNoteTimeWrap').classList.add('hidden');
+  document.getElementById('printDayBtn').classList.remove('hidden');
+  document.getElementById('printConfirmRow').classList.add('hidden');
 
   renderDayNotes();
   document.getElementById('dayDetailModal').classList.add('show');
@@ -2118,11 +2144,12 @@ function openDayDetail(y, m, d){
 function renderDayNotes(){
   const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
   const list = notesFor(key);
-  document.getElementById('dayNotesList').innerHTML = list.length ? list.map((n) => `
+  document.getElementById('ddExistingNotesWrap').classList.toggle('hidden', list.length === 0);
+  document.getElementById('dayNotesList').innerHTML = list.map((n) => `
     <div class="noteRow" data-id="${n.id}">
       <div><div class="noteText">${escapeHtml(n.text)}</div>${n.notify ? `<div class="noteTime">🔔 ${n.time}</div>` : ''}</div>
       <button class="noteDelBtn" data-id="${n.id}">✕</button>
-    </div>`).join('') : '<div class="hint">No reminders yet.</div>';
+    </div>`).join('');
   document.getElementById('dayNotesList').querySelectorAll('.noteDelBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
       deleteNoteFor(key, btn.getAttribute('data-id'));
@@ -2148,9 +2175,11 @@ document.getElementById('dayAddNoteBtn').addEventListener('click', () => {
 document.getElementById('dayDetailBackBtn').addEventListener('click', () => document.getElementById('dayDetailModal').classList.remove('show'));
 document.getElementById('dayDetailModal').addEventListener('click', (e) => { if (e.target.id==='dayDetailModal') document.getElementById('dayDetailModal').classList.remove('show'); });
 
-document.getElementById('printDayBtn').addEventListener('click', () => {
+/* Printing: tapping the button reveals two small choices instead of a
+   checkbox that's always on screen — nothing extra to look at until it's
+   actually relevant. */
+function printDayFinal(includeNotes){
   const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
-  const includeNotes = document.getElementById('printIncludeNotes').checked;
   const jdn = HebrewEngine.gregorianToJDN(dayDetailY, dayDetailM, dayDetailD);
   const hebDate = HebrewEngine.jdnToHebrew(jdn);
   const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
@@ -2171,7 +2200,15 @@ document.getElementById('printDayBtn').addEventListener('click', () => {
   `;
   document.getElementById('dayDetailModal').classList.remove('show');
   setTimeout(() => window.print(), 150);
+}
+document.getElementById('printDayBtn').addEventListener('click', () => {
+  const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
+  if (notesFor(key).length === 0) { printDayFinal(false); return; } // nothing to ask about
+  document.getElementById('printDayBtn').classList.add('hidden');
+  document.getElementById('printConfirmRow').classList.remove('hidden');
 });
+document.getElementById('printWithNotesBtn').addEventListener('click', () => printDayFinal(true));
+document.getElementById('printNoNotesBtn').addEventListener('click', () => printDayFinal(false));
 
 /* ===================== Service worker registration ===================== */
 if ('serviceWorker' in navigator) {
