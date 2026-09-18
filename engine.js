@@ -176,7 +176,7 @@ const HebrewEngine = (function () {
   }
 
   // Yiddish day-of-week names (index matches JS Date.getDay(): 0=Sunday..6=Saturday)
-  const YIDDISH_DAYS = ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת'];
+  const YIDDISH_DAYS = ['זונטיק', 'מאנטיק', 'דינסטיק', 'מיטוואך', 'דאנערשטיק', 'פרייטיק', 'שבת קודש'];
 
   // ---------- Public API ----------
   return {
@@ -290,7 +290,187 @@ const ZmanimEngine = (function () {
     };
   }
 
-  return { getZmanim };
+  /* =========================================================================
+     ADVANCED / CONFIGURABLE ZMANIM — every zman with its selectable opinions.
+     ZMAN_DEFS and HOUR_SYSTEMS are the single source of truth for what
+     opinions exist, so the UI can build its dropdowns straight from these
+     instead of hardcoding a duplicate list that could drift out of sync.
+     ========================================================================= */
+
+  // degreesBelow is measured from the true (0°) horizon; degreesBelow=0.833
+  // reproduces standard sunrise/sunset (refraction + solar radius).
+  function angleEventMinutes(refUTC, lat, lon, degreesBelow, morning) {
+    return solarEventUTCMinutes(refUTC, lat, lon, 90 + degreesBelow, morning);
+  }
+  // "dip of the horizon" for an elevated observer, in degrees.
+  function elevationDipDegrees(meters) {
+    if (!meters || meters <= 0) return 0;
+    return (1.76 * Math.sqrt(meters)) / 60;
+  }
+
+  const ZMAN_DEFS = {
+    alos: { label: 'Alos Hashachar', hebrew: 'עלות השחר', kind: 'degreeOrFixed', side: 'morning',
+      options: [
+        { id: '16.1', label: '16.1°', degrees: 16.1 },
+        { id: '18', label: '18°', degrees: 18 },
+        { id: '19.8', label: '19.8° (Chayei Adam)', degrees: 19.8 },
+        { id: 'baalHatanya', label: '16.9° (Baal HaTanya)', degrees: 16.9 },
+        { id: 'fixed72', label: '72 fixed minutes', fixedMinutes: 72 },
+        { id: 'fixed90', label: '90 fixed minutes', fixedMinutes: 90 },
+        { id: 'fixed96', label: '96 fixed minutes', fixedMinutes: 96 }
+      ], default: '16.1' },
+    misheyakir: { label: 'Misheyakir', hebrew: 'משיכיר', kind: 'degreeOrFixed', side: 'morning',
+      options: [
+        { id: '11.5', label: '11.5°', degrees: 11.5 },
+        { id: '11', label: '11°', degrees: 11 },
+        { id: '10.2', label: '10.2° (Chabad)', degrees: 10.2 },
+        { id: '7.65', label: '7.65° (Star-K)', degrees: 7.65 }
+      ], default: '11' },
+    netz: { label: 'Netz (Sunrise)', hebrew: 'הנץ החמה', kind: 'sunEvent', side: 'morning',
+      options: [ { id: 'standard', label: 'Standard' }, { id: 'elevation', label: 'Elevation-adjusted' } ], default: 'standard' },
+    shkiah: { label: 'Shkiah (Sunset)', hebrew: 'שקיעת החמה', kind: 'sunEvent', side: 'evening',
+      options: [ { id: 'standard', label: 'Standard' }, { id: 'elevation', label: 'Elevation-adjusted' } ], default: 'standard' },
+    shma: { label: 'Sof Zman Krias Shema', hebrew: 'סוף זמן ק"ש', kind: 'hourBased', offsetHours: 3 },
+    tefila: { label: 'Sof Zman Tefila', hebrew: 'סוף זמן תפילה', kind: 'hourBased', offsetHours: 4 },
+    chatzos: { label: 'Chatzos', hebrew: 'חצות היום', kind: 'fixed' },
+    minchaGedolah: { label: 'Mincha Gedolah', hebrew: 'מנחה גדולה', kind: 'hourBased', offsetHours: 6.5 },
+    minchaKetana: { label: 'Mincha Ketana', hebrew: 'מנחה קטנה', kind: 'hourBased', offsetHours: 9.5 },
+    plag: { label: 'Plag HaMincha', hebrew: 'פלג המנחה', kind: 'hourBased', offsetHours: 10.75 },
+    candle: { label: 'Candle Lighting', hebrew: 'הדלקת נרות', kind: 'minutesBeforeSunset',
+      presets: [10, 15, 18, 20, 22, 30, 36, 40], default: 18 },
+    tzeisEveryday: { label: 'Tzeis Hakochavim (everyday)', hebrew: 'צאת הכוכבים (חול)', kind: 'tzeisEveryday',
+      options: [
+        { id: 'geonim', label: 'Geonim (~14–20 min / 4.37°)', degrees: 4.37 },
+        { id: 'medium', label: '3 medium stars (~42 min / 7.083°)', degrees: 7.083 },
+        { id: 'small', label: '3 small stars (~50 min / 8.5°)', degrees: 8.5 }
+      ], default: 'small' },
+    havdalah: { label: 'Havdalah (Motzei Shabbos/Yom Tov)', hebrew: 'הבדלה (מוצאי שבת/יו"ט)', kind: 'havdalah',
+      options: [
+        { id: 'small85', label: '3 small stars (8.5°)', degrees: 8.5 },
+        { id: 'rt72fixed', label: 'Rabbeinu Tam — 72 fixed minutes', fixedMinutes: 72 },
+        { id: 'rt72zmaniyos', label: 'Rabbeinu Tam — 72 proportional minutes', zmaniyosMinutes: 72 },
+        { id: 'rt90fixed', label: 'Rabbeinu Tam — 90 fixed minutes', fixedMinutes: 90 },
+        { id: 'rt96fixed', label: 'Rabbeinu Tam — 96 fixed minutes', fixedMinutes: 96 }
+      ], default: 'rt72fixed' }
+  };
+  const HOUR_SYSTEMS = [
+    { id: 'GRA', label: 'GRA (sunrise–sunset)' },
+    { id: 'MGA72', label: 'Magen Avraham (72 min)' },
+    { id: 'baalHatanya', label: 'Baal HaTanya' }
+  ];
+  const HOUR_BASED_ZMANIM = ['shma', 'tefila', 'minchaGedolah', 'minchaKetana', 'plag'];
+
+  function findOption(zmanKey, optionId) {
+    const def = ZMAN_DEFS[zmanKey];
+    if (!def || !def.options) return null;
+    return def.options.find((o) => o.id === optionId) || null;
+  }
+
+  // Computes every raw solar event once, then derives all display zmanim
+  // according to settings.zmanOpinion (per-zman choice), settings.hourSystemPerZman
+  // (per hour-based zman: 'shma'|'tefila'|'minchaGedolah'|'minchaKetana'|'plag' -> 'GRA'|'MGA72'|'baalHatanya'),
+  // and settings.candleLightingMinutes. Falls back to each zman's default
+  // opinion when nothing is chosen, so this is safe to call with a partial settings object.
+  function getZmanimFull(date, lat, lon, settings) {
+    settings = settings || {};
+    const opinion = settings.zmanOpinion || {};
+    const hourSystemPerZman = settings.hourSystemPerZman || {};
+    const elevationMeters = settings.elevationMeters || 0;
+    const candleMin = settings.candleLightingMinutes != null ? settings.candleLightingMinutes : ZMAN_DEFS.candle.default;
+
+    const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+    const refUTC = new Date(Date.UTC(y, m, d, 17, 0, 0));
+    const tzOffsetHours = -date.getTimezoneOffset() / 60;
+    const dip = elevationDipDegrees(elevationMeters);
+
+    // --- base sun events ---
+    const sunriseStd = angleEventMinutes(refUTC, lat, lon, 0.833, true);
+    const sunsetStd = angleEventMinutes(refUTC, lat, lon, 0.833, false);
+    if (sunriseStd == null || sunsetStd == null) return null; // polar edge case
+
+    const sunriseElev = angleEventMinutes(refUTC, lat, lon, 0.833 + dip, true);
+    const sunsetElev = angleEventMinutes(refUTC, lat, lon, 0.833 + dip, false);
+    const netzAmiti = angleEventMinutes(refUTC, lat, lon, 1.583, true);   // Baal HaTanya "true" sunrise (internal use)
+    const shkiahAmiti = angleEventMinutes(refUTC, lat, lon, 1.583, false); // Baal HaTanya "true" sunset (internal use)
+
+    const netzMin = (opinion.netz === 'elevation' && sunriseElev != null) ? sunriseElev : sunriseStd;
+    const shkiahMin = (opinion.shkiah === 'elevation' && sunsetElev != null) ? sunsetElev : sunsetStd;
+
+    // --- alos / misheyakir (degree or fixed-minute opinions) ---
+    function resolveMorningEvent(zmanKey, defaultOptId) {
+      const optId = opinion[zmanKey] || defaultOptId;
+      const opt = findOption(zmanKey, optId) || findOption(zmanKey, defaultOptId);
+      if (!opt) return null;
+      if (opt.fixedMinutes != null) return sunriseStd - opt.fixedMinutes;
+      return angleEventMinutes(refUTC, lat, lon, opt.degrees, true);
+    }
+    const alosMin = resolveMorningEvent('alos', ZMAN_DEFS.alos.default);
+    const misheyakirMin = resolveMorningEvent('misheyakir', ZMAN_DEFS.misheyakir.default);
+
+    // --- shaos zmaniyos (halachic hour length) per hour-system ---
+    const graShaZmanit = (sunsetStd - sunriseStd) / 12;
+    const alos72Fixed = sunriseStd - 72, tzeis72Fixed = sunsetStd + 72;
+    const mga72ShaZmanit = (tzeis72Fixed - alos72Fixed) / 12;
+    const baalHatanyaShaZmanit = (shkiahAmiti != null && netzAmiti != null) ? (shkiahAmiti - netzAmiti) / 12 : null;
+
+    function hourSystemFor(zmanKey) {
+      return hourSystemPerZman[zmanKey] || 'GRA';
+    }
+    function startAndShaFor(system) {
+      if (system === 'MGA72') return { start: alos72Fixed, sha: mga72ShaZmanit };
+      if (system === 'baalHatanya' && netzAmiti != null && baalHatanyaShaZmanit != null) return { start: netzAmiti, sha: baalHatanyaShaZmanit };
+      return { start: sunriseStd, sha: graShaZmanit }; // GRA default/fallback
+    }
+    function hourBasedMinutes(zmanKey, offsetHours) {
+      const { start, sha } = startAndShaFor(hourSystemFor(zmanKey));
+      return start + offsetHours * sha;
+    }
+
+    // --- tzeis (everyday) and Havdalah (Motzei Shabbos/Yom Tov) ---
+    function resolveEveningEvent(zmanKey) {
+      const def = ZMAN_DEFS[zmanKey];
+      const optId = opinion[zmanKey] || def.default;
+      const opt = findOption(zmanKey, optId) || findOption(zmanKey, def.default);
+      if (!opt) return null;
+      if (opt.fixedMinutes != null) return sunsetStd + opt.fixedMinutes;
+      if (opt.zmaniyosMinutes != null) return sunsetStd + opt.zmaniyosMinutes * (graShaZmanit / 60);
+      return angleEventMinutes(refUTC, lat, lon, opt.degrees, false);
+    }
+    const tzeisEverydayMin = resolveEveningEvent('tzeisEveryday');
+    const havdalahMin = resolveEveningEvent('havdalah');
+
+    const chatzosMin = (sunriseStd + sunsetStd) / 2;
+    const candleLightingMin = shkiahMin - candleMin;
+
+    // --- format for display ---
+    const toLocal = (utcMin) => { let local = utcMin + tzOffsetHours * 60; return ((local % 1440) + 1440) % 1440; };
+    const fmt = (utcMin) => {
+      if (utcMin == null) return null;
+      const local = toLocal(utcMin);
+      const h = Math.floor(local / 60), mi = Math.round(local % 60);
+      let h12 = h % 12; if (h12 === 0) h12 = 12;
+      return { text: `${h12}:${String(mi).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`, minutesLocal: local };
+    };
+
+    return {
+      alos: fmt(alosMin),
+      misheyakir: fmt(misheyakirMin),
+      netz: fmt(netzMin),
+      shma: fmt(hourBasedMinutes('shma', 3)),
+      tefila: fmt(hourBasedMinutes('tefila', 4)),
+      chatzos: fmt(chatzosMin),
+      minchaGedolah: fmt(hourBasedMinutes('minchaGedolah', 6.5)),
+      minchaKetana: fmt(hourBasedMinutes('minchaKetana', 9.5)),
+      plag: fmt(hourBasedMinutes('plag', 10.75)),
+      shkiah: fmt(shkiahMin),
+      candle: fmt(candleLightingMin),
+      tzeisEveryday: fmt(tzeisEverydayMin),
+      havdalah: fmt(havdalahMin),
+      _raw: { sunriseStd, sunsetStd, netzMin, shkiahMin, tzOffsetHours }
+    };
+  }
+
+  return { getZmanim, getZmanimFull, ZMAN_DEFS, HOUR_SYSTEMS, HOUR_BASED_ZMANIM };
 })();
 
 if (typeof module !== 'undefined') module.exports = { HebrewEngine, ZmanimEngine };
