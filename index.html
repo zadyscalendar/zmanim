@@ -249,21 +249,31 @@
     display:none;
     position:fixed; inset:0;
     background:#f7f5ef; color:#161616;
-    overflow-y:auto;
+    flex-direction:column;
+    overflow:hidden;
   }
-  #normalHome.show{ display:block; }
+  #normalHome.show{ display:flex; }
   #nhTopBar{
     display:flex; align-items:center; gap:16px;
-    padding:16px 24px;
+    flex-wrap:wrap; flex:0 0 auto;
+    /* Extra room at the very top for a phone's notch/camera cutout — the
+       bar stays white all the way up, so it just reads as a taller header
+       rather than a gap, and the actual title/buttons sit safely below it. */
+    padding: calc(16px + max(28px, env(safe-area-inset-top))) 24px 16px;
     background:#fff; border-bottom:1px solid #e3e6ea;
-    position:sticky; top:0; z-index:5; flex-wrap:wrap;
+    position:sticky; top:0; z-index:5;
   }
   #nhBrand{ font-weight:800; letter-spacing:1px; font-size:18px; }
   #nhTopDate{ color:#999; font-size:14.5px; flex:1 1 auto; }
   #nhTopActions{ display:flex; gap:8px; flex-wrap:wrap; }
 
-  #nhBody{ max-width:760px; margin:0 auto; padding:24px 20px 60px; display:flex; flex-direction:column; gap:18px; }
-  .nhCard{ background:#fff; border:1px solid #e3e6ea; border-radius:16px; padding:22px 24px; }
+  #nhScroll{ flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; }
+  #nhBody{
+    flex:1 1 auto; width:100%; max-width:760px; margin:0 auto; box-sizing:border-box;
+    padding:24px 20px calc(24px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:min(4vh, 32px); justify-content:center;
+  }
+  .nhCard{ background:#fff; border:1px solid #e3e6ea; border-radius:16px; padding:22px 24px; flex:0 0 auto; }
 
   #nhDateCard{ text-align:center; }
   #nhClock{ font-size:clamp(44px, 8vw, 68px); font-weight:200; letter-spacing:1px; font-variant-numeric:tabular-nums; color:#161616; }
@@ -737,6 +747,7 @@
       <button id="nhSettingsBtn" class="calTopBtn">⚙️ Settings</button>
     </div>
   </div>
+  <div id="nhScroll">
   <div id="nhBody">
     <div class="nhCard" id="nhDateCard">
       <div id="nhClock"></div>
@@ -757,6 +768,7 @@
       <div class="ddSectionLabel">Today's Reminders</div>
       <div id="nhRemindersList"></div>
     </div>
+  </div>
   </div>
 </div>
 
