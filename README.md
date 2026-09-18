@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/32361065/README.md)
 # Zman & Luach — Kiryas Joel Clock
 
 An offline-first wall/desktop clock: large clock, English + Hebrew date, zmanim
@@ -97,3 +98,39 @@ The two "evening" boxes change their label and value depending on the day:
 The day-of-week badge under the clock is shown in Yiddish, with a soft
 highlight on an ordinary day and a stronger highlight on Shabbos/Yom Tov. On
 Yom Tov, the banner also shows: א פרייליכן יום טוב פון משפחת ניימאן.
+
+## 7. Location — one simple rule, everywhere
+
+There's no separate setup step and no "wall tablet vs. phone" distinction.
+The app always tries to use the device's real current location, quietly
+checking again on load, whenever Wi‑Fi reconnects, and every hour while
+open. Whenever it succeeds, every zmanim calculation immediately
+recalculates for that spot. The moment it can't get a fix — location turned
+off, permission not granted, briefly offline — it simply keeps using the
+last real location it had; nothing resets and nothing needs configuring.
+Before a device has ever gotten a real fix, it starts from Kiryas Joel as a
+placeholder, which is quietly replaced for good the first time a real GPS
+fix comes through.
+
+The bottom-left of the screen always shows exactly which location is
+currently in use. In Settings, "🏠 [place name]" always returns to wherever
+this specific device first really connected from — it names itself
+automatically (for this deployment that will naturally be Kiryas Joel, but
+on anyone else's copy of this app it becomes their own home town, with
+nothing to configure or hardcode). "📍 Refresh My Location Now" forces an
+immediate re-check.
+
+## 8. Browsing the calendar on-screen
+
+The round 📅 button in the bottom-right corner opens a full month-by-month
+Jewish calendar you can page through with ◀ / ▶ — every day shows its
+Hebrew date, any holiday, the Omer count when relevant, and Friday/Saturday
+candle-lighting or Havdalah times, exactly like the printed version but
+browsable on-screen for looking ahead (or back) without printing anything.
+Tap outside the card, or the ✕, to close it and return to the clock.
+
+## 9. Printing exactly as much as you want
+
+In Settings, the print range isn't limited to the preset dropdown — typing
+a number into "or exact months" (1 to 60) prints exactly that many months
+ahead instead, starting from the current month.
