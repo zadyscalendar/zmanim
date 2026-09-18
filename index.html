@@ -180,6 +180,8 @@
     color: var(--fg-soft);
     text-transform:uppercase;
     letter-spacing:0.5px;
+    direction: rtl;
+    font-family: "Times New Roman", "Arial Hebrew", "Noto Sans Hebrew", serif;
   }
   .zman .time{
     font-size: clamp(16px, 2.1vw, 30px);
@@ -210,10 +212,12 @@
     position:fixed; top:0; right:0;
     width: 70px; height:70px;
     background:transparent; border:none;
-    opacity:0.06;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 26px;
+    opacity:0.35;
     z-index: 50;
   }
-  #gearBtn:active{ opacity:0.3; }
+  #gearBtn:active{ opacity:0.7; }
 
   #settingsPanel{
     display:none;
@@ -367,20 +371,20 @@
   <div id="omerBar"></div>
 
   <div id="zmanim">
-    <div class="zman"><div class="label">Alot Hashachar</div><div class="time" id="z-alot">--:--</div></div>
-    <div class="zman"><div class="label">Netz (Sunrise)</div><div class="time" id="z-netz">--:--</div></div>
-    <div class="zman"><div class="label">Sof Zman Shma</div><div class="time" id="z-shma">--:--</div></div>
-    <div class="zman"><div class="label">Sof Zman Tefila</div><div class="time" id="z-tefila">--:--</div></div>
-    <div class="zman"><div class="label">Chatzos</div><div class="time" id="z-chatzos">--:--</div></div>
-    <div class="zman"><div class="label">Mincha Ketana</div><div class="time" id="z-mincha">--:--</div></div>
-    <div class="zman"><div class="label" id="z-candle-label">Shkiah (Sunset)</div><div class="time" id="z-candle">--:--</div></div>
-    <div class="zman"><div class="label" id="z-havdalah-label">Tzeit Hakochavim</div><div class="time" id="z-havdalah">--:--</div></div>
+    <div class="zman"><div class="label">עלות השחר</div><div class="time" id="z-alot">--:--</div></div>
+    <div class="zman"><div class="label">הנץ החמה</div><div class="time" id="z-netz">--:--</div></div>
+    <div class="zman"><div class="label">סוף זמן ק"ש</div><div class="time" id="z-shma">--:--</div></div>
+    <div class="zman"><div class="label">סוף זמן תפילה</div><div class="time" id="z-tefila">--:--</div></div>
+    <div class="zman"><div class="label">חצות היום</div><div class="time" id="z-chatzos">--:--</div></div>
+    <div class="zman"><div class="label">מנחה קטנה</div><div class="time" id="z-mincha">--:--</div></div>
+    <div class="zman"><div class="label" id="z-candle-label">שקיעת החמה</div><div class="time" id="z-candle">--:--</div></div>
+    <div class="zman"><div class="label" id="z-havdalah-label">צאת הכוכבים</div><div class="time" id="z-havdalah">--:--</div></div>
   </div>
 
   <div id="footer"><span id="footerLocation">Finding location…</span> &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
 </div>
 
-<button id="gearBtn" aria-label="Settings"></button>
+<button id="gearBtn" aria-label="Settings">⚙️</button>
 <button id="calendarBtn" aria-label="Jewish Calendar">📅</button>
 
 <div id="calendarModal">
@@ -819,11 +823,11 @@ function renderZmanim(state){
   const candleValueEl = document.getElementById('z-candle');
   const candleBox = candleValueEl.closest('.zman');
   if (state.erevSomething) {
-    candleLabel.textContent = state.holidayTomorrow ? 'Candle Lighting (' + state.holidayTomorrow.name + ')' : 'Candle Lighting';
+    candleLabel.textContent = state.holidayTomorrow ? `הדלקת נרות ל${state.holidayTomorrow.nameHe}` : 'הדלקת נרות';
     candleValueEl.textContent = z.candleLighting.text;
     candleBox.classList.add('highlight');
   } else {
-    candleLabel.textContent = 'Shkiah (Sunset)';
+    candleLabel.textContent = 'שקיעת החמה';
     candleValueEl.textContent = z.shkiah.text;
     candleBox.classList.remove('highlight');
   }
@@ -833,11 +837,11 @@ function renderZmanim(state){
   const havdalahValueEl = document.getElementById('z-havdalah');
   const havdalahBox = havdalahValueEl.closest('.zman');
   if (state.havdalahTonight) {
-    havdalahLabel.textContent = (state.holiday && state.holiday.category==='yomtov') ? state.holiday.name + ' Ends' : 'Havdalah';
+    havdalahLabel.textContent = (state.holiday && state.holiday.category==='yomtov') ? `מוצאי ${state.holiday.nameHe}` : 'הבדלה';
     havdalahValueEl.textContent = z.havdalah.text;
     havdalahBox.classList.add('highlight');
   } else {
-    havdalahLabel.textContent = 'Tzeit Hakochavim';
+    havdalahLabel.textContent = 'צאת הכוכבים';
     havdalahValueEl.textContent = z.tzeitHakochavim.text;
     havdalahBox.classList.remove('highlight');
   }
@@ -1088,8 +1092,8 @@ function renderCalendarMonth(){
     let zmanLine = '';
     const z = ZmanimEngine.getZmanim(jsDate, currentLat(), currentLon(), settings);
     if (z) {
-      if (dow === 5) zmanLine = `🕯 ${z.candleLighting.text}`;
-      else if (dow === 6) zmanLine = `✡ ${z.havdalah.text}`;
+      if (dow === 5) zmanLine = `Candles: ${z.candleLighting.text}`;
+      else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
     }
 
     cells += `<div class="calDay ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}">
