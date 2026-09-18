@@ -163,7 +163,7 @@
   #zmanim{
     flex: 1 1 auto;
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1.4vh 1.4vw;
     align-content:center;
   }
@@ -247,6 +247,16 @@
   #settingsCard button.secondary{ background:#fff; color:#173d6b; }
   #settingsCard .hint{ color:#555; font-size:15px; line-height:1.4; }
   #syncStatus{ margin-top:10px; font-size:15px; color:#333; }
+
+  /* ---------- Per-zman settings rows ---------- */
+  .zSettingRow{
+    display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+    padding:8px 0; border-bottom:1px solid #ddd;
+  }
+  .zSettingRow:last-child{ border-bottom:none; }
+  .zSettingRow input[type=checkbox]{ width:20px; height:20px; flex:0 0 auto; }
+  .zSettingRow .zName{ font-weight:600; min-width:160px; flex:1 1 160px; }
+  .zSettingRow select{ font-size:15px; padding:6px; border-radius:6px; flex:1 1 200px; }
 
   /* ---------- Visible Jewish Calendar button (bottom-right) ---------- */
   #calendarBtn{
@@ -370,16 +380,7 @@
 
   <div id="omerBar"></div>
 
-  <div id="zmanim">
-    <div class="zman"><div class="label">עלות השחר</div><div class="time" id="z-alot">--:--</div></div>
-    <div class="zman"><div class="label">הנץ החמה</div><div class="time" id="z-netz">--:--</div></div>
-    <div class="zman"><div class="label">סוף זמן ק"ש</div><div class="time" id="z-shma">--:--</div></div>
-    <div class="zman"><div class="label">סוף זמן תפילה</div><div class="time" id="z-tefila">--:--</div></div>
-    <div class="zman"><div class="label">חצות היום</div><div class="time" id="z-chatzos">--:--</div></div>
-    <div class="zman"><div class="label">מנחה קטנה</div><div class="time" id="z-mincha">--:--</div></div>
-    <div class="zman"><div class="label" id="z-candle-label">שקיעת החמה</div><div class="time" id="z-candle">--:--</div></div>
-    <div class="zman"><div class="label" id="z-havdalah-label">צאת הכוכבים</div><div class="time" id="z-havdalah">--:--</div></div>
-  </div>
+  <div id="zmanim"></div>
 
   <div id="footer"><span id="footerLocation">Finding location…</span></div>
 </div>
@@ -443,14 +444,19 @@
       there's nothing to type in; it names itself.
     </p>
 
-    <label>Candle lighting — minutes before sunset</label>
-    <input type="number" id="candleMinInput" min="10" max="40" value="18">
+    <label>🕐 Zmanim — which to show, and which opinion for each</label>
+    <p class="hint">
+      Every zman below is calculated fresh for the exact date and exact
+      location, every time — none of this is a stored table. Turn any of
+      them on or off, and pick the specific opinion your community follows
+      for it. "Sunset / Candle Lighting" and "Nightfall / Havdalah" are
+      always shown (they automatically switch wording on Friday/Motzei
+      Shabbos as before) — everything else is optional.
+    </p>
+    <div id="zmanSettingsList"></div>
 
-    <label>Havdalah (Motzei Shabbos / Yom Tov) — minutes after sunset</label>
-    <input type="number" id="havdalahMinInput" min="30" max="90" value="72">
-
-    <label>Tzeit Hakochavim (regular weeknight nightfall) — minutes after sunset</label>
-    <input type="number" id="tzeitMinInput" min="20" max="60" value="45">
+    <label>Elevation adjustment (used only if selected above)</label>
+    <input type="number" id="elevationInput" min="0" max="5000" value="0" placeholder="meters">
 
     <label>Theme</label>
     <div class="row">
@@ -474,7 +480,14 @@
 <script>
 /* ===================== App configuration ===================== */
 const KJ_LOCATION = { lat: 41.3307, lon: -74.1868, label: 'Kiryas Joel (Monroe), NY' };
-const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto', location: null, homeLocation: null, clockMode: 'digital' };
+const ZMAN_ORDER = ['alos','misheyakir','netz','shma','tefila','chatzos','minchaGedolah','minchaKetana','plag'];
+const DEFAULTS = {
+  candleLightingMinutes: 18, theme: 'auto', location: null, homeLocation: null, clockMode: 'digital',
+  elevationMeters: 0,
+  zmanShow: { alos: true, misheyakir: false, netz: true, shma: true, tefila: true, chatzos: true, minchaGedolah: false, minchaKetana: true, plag: false },
+  zmanOpinion: { alos: '16.1', misheyakir: '11', netz: 'standard', shkiah: 'standard', tzeisEveryday: 'small', havdalah: 'rt72fixed' },
+  hourSystemPerZman: { shma: 'GRA', tefila: 'GRA', minchaGedolah: 'GRA', minchaKetana: 'GRA', plag: 'GRA' }
+};
 
 function loadSettings(){
   try {
@@ -727,7 +740,7 @@ function dateToLocalMinutes(minutesLocal){
 
 function computeDayState(now){
   const jdnToday = HebrewEngine.gregorianToJDN(now.getFullYear(), now.getMonth()+1, now.getDate());
-  const zmanToday = ZmanimEngine.getZmanim(now, currentLat(), currentLon(), settings);
+  const zmanToday = ZmanimEngine.getZmanimFull(now, currentLat(), currentLon(), settings);
 
   let hebrewJdn = jdnToday;
   let usedTomorrowZman = false;
@@ -774,7 +787,7 @@ function renderBanner(state){
   } else if (state.erevSomething && state.zmanToday) {
     show = true;
     const label = state.holidayTomorrow ? 'Erev ' + state.holidayTomorrow.name : 'Erev Shabbat';
-    html = `${label} <span class="sub">Candle Lighting at ${state.zmanToday.candleLighting.text}</span>`;
+    html = `${label} <span class="sub">Candle Lighting at ${state.zmanToday.candle.text}</span>`;
   } else if (state.holiday) {
     show = true;
     const dayLine = state.holiday.totalDays>1 ? 'Day '+state.holiday.dayNum+' of '+state.holiday.totalDays : '';
@@ -809,49 +822,49 @@ function renderDates(now, state){
 
 function renderZmanim(state){
   const z = state.zmanToday;
-  const set = (id, val) => { document.getElementById(id).textContent = val ? val.text : '--:--'; };
-  if (!z) return;
-  set('z-alot', z.alotHashachar);
-  set('z-netz', z.netzHachama);
-  set('z-shma', z.sofZmanShma);
-  set('z-tefila', z.sofZmanTefila);
-  set('z-chatzos', z.chatzos);
-  set('z-mincha', z.minchaKetana);
+  const container = document.getElementById('zmanim');
+  if (!z) { container.innerHTML = ''; return; }
+
+  const defs = ZmanimEngine.ZMAN_DEFS;
+  let html = '';
+  ZMAN_ORDER.forEach((key) => {
+    if (!settings.zmanShow[key]) return;
+    const val = z[key];
+    html += `<div class="zman"><div class="label">${defs[key].hebrew}</div><div class="time">${val ? val.text : '--:--'}</div></div>`;
+  });
 
   // Sunset box: "Candle Lighting" only on Friday / erev Yom Tov; otherwise plain "Shkiah" (Sunset)
-  const candleLabel = document.getElementById('z-candle-label');
-  const candleValueEl = document.getElementById('z-candle');
-  const candleBox = candleValueEl.closest('.zman');
+  let sunsetLabel, sunsetValue, sunsetHighlight = false;
   if (state.erevSomething) {
-    candleLabel.textContent = state.holidayTomorrow ? `הדלקת נרות ל${state.holidayTomorrow.nameHe}` : 'הדלקת נרות';
-    candleValueEl.textContent = z.candleLighting.text;
-    candleBox.classList.add('highlight');
+    sunsetLabel = state.holidayTomorrow ? `הדלקת נרות ל${state.holidayTomorrow.nameHe}` : 'הדלקת נרות';
+    sunsetValue = z.candle.text;
+    sunsetHighlight = true;
   } else {
-    candleLabel.textContent = 'שקיעת החמה';
-    candleValueEl.textContent = z.shkiah.text;
-    candleBox.classList.remove('highlight');
+    sunsetLabel = 'שקיעת החמה';
+    sunsetValue = z.shkiah.text;
   }
+  html += `<div class="zman ${sunsetHighlight ? 'highlight' : ''}"><div class="label">${sunsetLabel}</div><div class="time">${sunsetValue}</div></div>`;
 
-  // Nightfall box: "Havdalah" only Motzei Shabbos / Motzei Yom Tov; otherwise plain "Tzeit Hakochavim"
-  const havdalahLabel = document.getElementById('z-havdalah-label');
-  const havdalahValueEl = document.getElementById('z-havdalah');
-  const havdalahBox = havdalahValueEl.closest('.zman');
+  // Nightfall box: "Havdalah" only Motzei Shabbos / Motzei Yom Tov; otherwise plain "Tzeis Hakochavim"
+  let nightLabel, nightValue, nightHighlight = false;
   if (state.havdalahTonight) {
-    havdalahLabel.textContent = (state.holiday && state.holiday.category==='yomtov') ? `מוצאי ${state.holiday.nameHe}` : 'הבדלה';
-    havdalahValueEl.textContent = z.havdalah.text;
-    havdalahBox.classList.add('highlight');
+    nightLabel = (state.holiday && state.holiday.category==='yomtov') ? `מוצאי ${state.holiday.nameHe}` : 'הבדלה';
+    nightValue = z.havdalah.text;
+    nightHighlight = true;
   } else {
-    havdalahLabel.textContent = 'צאת הכוכבים';
-    havdalahValueEl.textContent = z.tzeitHakochavim.text;
-    havdalahBox.classList.remove('highlight');
+    nightLabel = 'צאת הכוכבים';
+    nightValue = z.tzeisEveryday.text;
   }
+  html += `<div class="zman ${nightHighlight ? 'highlight' : ''}"><div class="label">${nightLabel}</div><div class="time">${nightValue}</div></div>`;
+
+  container.innerHTML = html;
 }
 
 function applyTheme(now, state){
   let theme = settings.theme;
   if (theme === 'auto') {
     if (state.zmanToday) {
-      const sunrise = dateToLocalMinutes(state.zmanToday.netzHachama.minutesLocal);
+      const sunrise = dateToLocalMinutes(state.zmanToday.netz.minutesLocal);
       const sunset = dateToLocalMinutes(state.zmanToday.shkiah.minutesLocal);
       theme = (now < sunrise || now >= sunset) ? 'night' : 'day';
     } else {
@@ -887,14 +900,80 @@ setInterval(() => refreshLocation(true), 60 * 60 * 1000);
 /* ===================== Settings panel ===================== */
 const gearBtn = document.getElementById('gearBtn');
 const settingsPanel = document.getElementById('settingsPanel');
-const candleMinInput = document.getElementById('candleMinInput');
-const havdalahMinInput = document.getElementById('havdalahMinInput');
-const tzeitMinInput = document.getElementById('tzeitMinInput');
+const elevationInput = document.getElementById('elevationInput');
+
+/* Builds the per-zman settings rows straight from ZmanimEngine.ZMAN_DEFS,
+   so this list can never drift out of sync with what the engine actually
+   supports. Each row gets a show/hide checkbox (except the two always-on
+   sunset/nightfall slots) plus an opinion dropdown where one applies, and
+   the five hour-based zmanim also get an hour-system dropdown. */
+function buildZmanSettingsUI(){
+  const defs = ZmanimEngine.ZMAN_DEFS;
+  const container = document.getElementById('zmanSettingsList');
+  let html = '';
+
+  ZMAN_ORDER.forEach((key) => {
+    const def = defs[key];
+    const hasShowToggle = key in settings.zmanShow;
+    let optionsHtml = '';
+    if (def.options) {
+      optionsHtml = `<select data-opinion="${key}">` + def.options.map((o) =>
+        `<option value="${o.id}">${o.label}</option>`).join('') + `</select>`;
+    }
+    let hourSystemHtml = '';
+    if (ZmanimEngine.HOUR_BASED_ZMANIM.includes(key)) {
+      hourSystemHtml = `<select data-hoursystem="${key}">` + ZmanimEngine.HOUR_SYSTEMS.map((h) =>
+        `<option value="${h.id}">${h.label}</option>`).join('') + `</select>`;
+    }
+    html += `<div class="zSettingRow">
+      ${hasShowToggle ? `<input type="checkbox" data-show="${key}">` : '<span style="width:20px;"></span>'}
+      <span class="zName">${def.label}</span>
+      ${optionsHtml}${hourSystemHtml}
+    </div>`;
+  });
+
+  // The two always-on slots: opinion pickers only, no show/hide (they're structural).
+  html += `<div class="zSettingRow">
+    <span style="width:20px;"></span><span class="zName">Candle Lighting minutes</span>
+    <select data-opinion="candle">${ZmanimEngine.ZMAN_DEFS.candle.presets.map((p) => `<option value="${p}">${p} min before sunset</option>`).join('')}</select>
+  </div>`;
+  html += `<div class="zSettingRow">
+    <span style="width:20px;"></span><span class="zName">Tzeis Hakochavim (everyday)</span>
+    <select data-opinion="tzeisEveryday">${defs.tzeisEveryday.options.map((o) => `<option value="${o.id}">${o.label}</option>`).join('')}</select>
+  </div>`;
+  html += `<div class="zSettingRow">
+    <span style="width:20px;"></span><span class="zName">Havdalah (Motzei Shabbos/Yom Tov)</span>
+    <select data-opinion="havdalah">${defs.havdalah.options.map((o) => `<option value="${o.id}">${o.label}</option>`).join('')}</select>
+  </div>`;
+
+  container.innerHTML = html;
+
+  // populate current values
+  container.querySelectorAll('input[data-show]').forEach((cb) => {
+    const key = cb.getAttribute('data-show');
+    cb.checked = !!settings.zmanShow[key];
+    cb.addEventListener('change', () => { settings.zmanShow[key] = cb.checked; saveSettings(settings); cachedDayKey = null; });
+  });
+  container.querySelectorAll('select[data-opinion]').forEach((sel) => {
+    const key = sel.getAttribute('data-opinion');
+    if (key === 'candle') sel.value = settings.candleLightingMinutes;
+    else sel.value = settings.zmanOpinion[key];
+    sel.addEventListener('change', () => {
+      if (key === 'candle') settings.candleLightingMinutes = parseInt(sel.value, 10);
+      else settings.zmanOpinion[key] = sel.value;
+      saveSettings(settings); cachedDayKey = null;
+    });
+  });
+  container.querySelectorAll('select[data-hoursystem]').forEach((sel) => {
+    const key = sel.getAttribute('data-hoursystem');
+    sel.value = settings.hourSystemPerZman[key];
+    sel.addEventListener('change', () => { settings.hourSystemPerZman[key] = sel.value; saveSettings(settings); cachedDayKey = null; });
+  });
+}
 
 function openSettings(){
-  candleMinInput.value = settings.candleLightingMinutes;
-  havdalahMinInput.value = settings.havdalahMinutes;
-  tzeitMinInput.value = settings.tzeitMinutes;
+  elevationInput.value = settings.elevationMeters;
+  buildZmanSettingsUI();
   updateLocationStatus();
   updateHomeButton();
   settingsPanel.classList.add('show');
@@ -905,9 +984,7 @@ document.getElementById('useMyLocationBtn').addEventListener('click', () => refr
 updateHomeButton();
 updateLocationStatus();
 document.getElementById('closeSettings').addEventListener('click', () => {
-  settings.candleLightingMinutes = parseInt(candleMinInput.value, 10) || DEFAULTS.candleLightingMinutes;
-  settings.havdalahMinutes = parseInt(havdalahMinInput.value, 10) || DEFAULTS.havdalahMinutes;
-  settings.tzeitMinutes = parseInt(tzeitMinInput.value, 10) || DEFAULTS.tzeitMinutes;
+  settings.elevationMeters = parseInt(elevationInput.value, 10) || 0;
   saveSettings(settings);
   cachedDayKey = null; // force recompute
   settingsPanel.classList.remove('show');
@@ -915,6 +992,7 @@ document.getElementById('closeSettings').addEventListener('click', () => {
 document.getElementById('themeAuto').addEventListener('click', () => { settings.theme='auto'; saveSettings(settings); });
 document.getElementById('themeDay').addEventListener('click', () => { settings.theme='day'; saveSettings(settings); document.body.setAttribute('data-theme','day'); });
 document.getElementById('themeNight').addEventListener('click', () => { settings.theme='night'; saveSettings(settings); document.body.setAttribute('data-theme','night'); });
+
 
 document.getElementById('fullscreenBtn').addEventListener('click', () => {
   if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
@@ -987,9 +1065,9 @@ function buildOneMonthTable(y, m){
     const dow = jsDate.getDay();
 
     let zmanLine = '';
-    const z = ZmanimEngine.getZmanim(jsDate, currentLat(), currentLon(), settings);
+    const z = ZmanimEngine.getZmanimFull(jsDate, currentLat(), currentLon(), settings);
     if (z) {
-      if (dow === 5) zmanLine = `Candles: ${z.candleLighting.text}`;
+      if (dow === 5) zmanLine = `Candles: ${z.candle.text}`;
       else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
     }
     const omer = HebrewEngine.getOmerDay(jdn, hebDate.year);
@@ -1079,9 +1157,9 @@ function renderCalendarMonth(){
     const isToday = (y === today.getFullYear() && m === today.getMonth() + 1 && day === today.getDate());
 
     let zmanLine = '';
-    const z = ZmanimEngine.getZmanim(jsDate, currentLat(), currentLon(), settings);
+    const z = ZmanimEngine.getZmanimFull(jsDate, currentLat(), currentLon(), settings);
     if (z) {
-      if (dow === 5) zmanLine = `Candles: ${z.candleLighting.text}`;
+      if (dow === 5) zmanLine = `Candles: ${z.candle.text}`;
       else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
     }
 
