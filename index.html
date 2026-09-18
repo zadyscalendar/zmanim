@@ -744,27 +744,46 @@ document.getElementById('fullscreenBtn').addEventListener('click', () => {
   if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 });
 
-/* ===================== Sync button (re-registers SW / re-fetches app files while online) ===================== */
-document.getElementById('syncBtn').addEventListener('click', async () => {
+/* ===================== Sync: manual button + automatic on Wi-Fi reconnect =====================
+   performSync() re-fetches every app file with cache:'no-store', which — thanks
+   to the network-first service worker — both confirms the connection is real
+   and refreshes the offline copy of everything. If that turns up a genuinely
+   newer version, the service worker's own activate step (already wired to
+   'controllerchange'/'SW_UPDATED' below) reloads the page automatically. If
+   nothing changed, a background check is silent — no disruption. */
+const APP_FILES = ['./index.html', './engine.js', './manifest.json', './icon-192.png', './icon-512.png'];
+
+async function performSync(isManual){
   const statusEl = document.getElementById('syncStatus');
-  statusEl.textContent = 'Checking for updates…';
+  if (isManual) statusEl.textContent = 'Checking for updates…';
   try {
-    // Confirm we actually have a live connection by re-fetching this page
-    // (bypassing any cache). The service worker is already network-first,
-    // so this also refreshes every cached file in the background.
-    await fetch('./index.html', { cache: 'no-store' });
+    await Promise.all(APP_FILES.map((f) => fetch(f, { cache: 'no-store' }).catch(() => {})));
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg) await reg.update();
     }
-    const now = new Date();
-    localStorage.setItem('lastSync', now.toISOString());
-    statusEl.textContent = 'Up to date! Reloading…';
-    setTimeout(() => window.location.reload(), 700);
+    localStorage.setItem('lastSync', new Date().toISOString());
+    updateLastSyncFooter();
+    if (isManual) {
+      statusEl.textContent = 'Up to date! Reloading…';
+      setTimeout(() => window.location.reload(), 700);
+    }
   } catch (e) {
-    statusEl.textContent = 'Could not sync — check Wi-Fi connection.';
+    if (isManual) statusEl.textContent = 'Could not sync — check Wi-Fi connection.';
   }
-});
+}
+
+document.getElementById('syncBtn').addEventListener('click', () => performSync(true));
+
+// The moment this device reconnects to Wi-Fi, quietly check everything is
+// current — this is what keeps the tablet from ever silently drifting out
+// of date, without anyone needing to remember to press Sync.
+window.addEventListener('online', () => performSync(false));
+
+// Extra safety net: if the tablet just stays connected for a long stretch
+// (so 'online' never fires again), still re-check every couple of hours.
+setInterval(() => { if (navigator.onLine) performSync(false); }, 2 * 60 * 60 * 1000);
+
 function updateLastSyncFooter(){
   const raw = localStorage.getItem('lastSync');
   const el = document.getElementById('lastSync');
