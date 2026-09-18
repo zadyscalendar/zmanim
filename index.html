@@ -244,11 +244,86 @@
   #settingsCard .hint{ color:#555; font-size:15px; line-height:1.4; }
   #syncStatus{ margin-top:10px; font-size:15px; color:#333; }
 
+  /* ---------- Visible Jewish Calendar button (bottom-right) ---------- */
+  #calendarBtn{
+    position:fixed; right: 2vw; bottom: 2vh;
+    width: clamp(56px, 8vw, 76px); height: clamp(56px, 8vw, 76px);
+    border-radius: 50%;
+    background: var(--panel); color: var(--fg);
+    border: 2px solid var(--line);
+    font-size: clamp(24px, 3.5vw, 34px);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    z-index: 40;
+    cursor:pointer;
+  }
+  #calendarBtn:active{ transform: scale(0.94); }
+
+  #calendarModal{
+    display:none;
+    position:fixed; inset:0;
+    background: rgba(0,0,0,0.6);
+    z-index: 90;
+    align-items:center; justify-content:center;
+  }
+  #calendarModal.show{ display:flex; }
+  #calendarCard{
+    background: var(--panel); color: var(--fg);
+    width:min(1000px, 95vw);
+    max-height:92vh;
+    border-radius:18px;
+    padding: 2vh 2vw;
+    display:flex; flex-direction:column;
+    gap: 1.4vh;
+  }
+  #calendarHeader{
+    display:flex; align-items:center; justify-content:center; gap:2vw;
+    position:relative;
+  }
+  #calendarTitle{ text-align:center; }
+  #calMonthEn{ font-size: clamp(22px, 3vw, 36px); font-weight:800; }
+  #calMonthHe{ font-size: clamp(16px, 2vw, 24px); direction:rtl; color: var(--fg-soft); font-family:"Times New Roman","Arial Hebrew",serif; }
+  .navBtn{
+    font-size: clamp(20px, 2.6vw, 30px);
+    background: var(--panel); color: var(--fg);
+    border: 2px solid var(--line); border-radius: 10px;
+    padding: 0.4em 0.7em; cursor:pointer;
+  }
+  #calCloseBtn{
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    font-size: clamp(20px, 2.4vw, 28px);
+    background:transparent; border:none; color: var(--fg); cursor:pointer;
+  }
+  #calendarGrid{
+    display:grid; grid-template-columns: repeat(7, 1fr);
+    gap: 0.6vh 0.5vw;
+    overflow-y:auto;
+  }
+  .calDowHead{
+    text-align:center; font-weight:700; font-size: clamp(12px, 1.4vw, 18px);
+    color: var(--fg-soft); padding-bottom: 0.3vh;
+  }
+  .calDay{
+    border: 2px solid var(--line); border-radius: 10px;
+    padding: 0.5vh 0.4vw;
+    min-height: 11vh;
+    background: var(--bg);
+    display:flex; flex-direction:column;
+  }
+  .calDay.empty{ visibility:hidden; }
+  .calDay.today{ border-color: var(--accent); border-width:3px; }
+  .calDay.holiday{ background: rgba(23,61,107,0.08); }
+  [data-theme="night"] .calDay.holiday{ background: rgba(231,217,168,0.10); }
+  .calNum{ font-weight:800; font-size: clamp(14px, 1.7vw, 22px); }
+  .calHeb{ font-size: clamp(10px, 1.1vw, 14px); color: var(--fg-soft); direction:rtl; }
+  .calHoliday{ font-size: clamp(10px, 1.15vw, 14px); font-weight:700; color: var(--accent); margin-top:auto; }
+  .calZman{ font-size: clamp(9px, 1vw, 13px); color: var(--fg-soft); }
+
   /* ---------- Print view (hidden on screen) ---------- */
   #printArea{ display:none; }
 
   @media print{
-    #gearBtn, #settingsPanel { display:none !important; }
+    #gearBtn, #settingsPanel, #calendarBtn, #calendarModal { display:none !important; }
     #app{ display:none !important; }
     body{ overflow:visible; background:#fff; color:#000; }
     #printArea{
@@ -302,10 +377,27 @@
     <div class="zman"><div class="label" id="z-havdalah-label">Tzeit Hakochavim</div><div class="time" id="z-havdalah">--:--</div></div>
   </div>
 
-  <div id="footer"><span id="footerLocation">Kiryas Joel (Monroe), NY</span> &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
+  <div id="footer"><span id="footerLocation">Finding location…</span> &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
 </div>
 
 <button id="gearBtn" aria-label="Settings"></button>
+<button id="calendarBtn" aria-label="Jewish Calendar">📅</button>
+
+<div id="calendarModal">
+  <div id="calendarCard">
+    <div id="calendarHeader">
+      <button id="calPrevBtn" class="navBtn">◀</button>
+      <div id="calendarTitle">
+        <div id="calMonthEn">Month Year</div>
+        <div id="calMonthHe">Hebrew Month Year</div>
+      </div>
+      <button id="calNextBtn" class="navBtn">▶</button>
+      <button id="calCloseBtn" aria-label="Close Calendar">✕</button>
+    </div>
+    <div id="calendarGrid"></div>
+  </div>
+</div>
+
 
 <div id="settingsPanel">
   <div id="settingsCard">
@@ -326,20 +418,25 @@
         <option value="12">Next 12 months</option>
         <option value="24">Next 24 months (2 years)</option>
       </select>
+      <span style="align-self:center;">or exact months:</span>
+      <input type="number" id="printCustomMonths" min="1" max="60" placeholder="e.g. 8">
       <button id="printBtn">🖨️ Print</button>
     </div>
 
     <label>Location</label>
     <div class="row">
-      <button id="useKjBtn" class="secondary">📍 Kiryas Joel, NY (default)</button>
-      <button id="useMyLocationBtn" class="secondary">📍 Use My Current Location</button>
+      <button id="useMyLocationBtn" class="secondary">📍 Refresh My Location Now</button>
+      <button id="useKjBtn" class="secondary">🏠 Set Home Location</button>
     </div>
-    <div id="locationStatus" class="hint">Currently using: Kiryas Joel (Monroe), NY</div>
+    <div id="locationStatus" class="hint">Finding location…</div>
     <p class="hint">
-      On the wall-mounted tablet, leave this on Kiryas Joel. If you install this
-      same app on a phone and want zmanim for wherever you are that day, tap
-      "Use My Current Location" — it will ask permission once, then remember
-      your choice on that device until you switch it back.
+      This app always tries to use your real current location, quietly
+      checking in the background whenever it's online and location is
+      turned on — so the zmanim automatically update if you actually travel.
+      If location is turned off or unavailable, it simply keeps using the
+      last real location it had, with nothing to configure. The Home button
+      always returns to wherever this device first really connected from —
+      there's nothing to type in; it names itself.
     </p>
 
     <label>Candle lighting — minutes before sunset</label>
@@ -372,74 +469,144 @@
 <script src="engine.js"></script>
 <script>
 /* ===================== App configuration ===================== */
-const KJ_LOCATION = { mode: 'kj', lat: 41.3307, lon: -74.1868, label: 'Kiryas Joel (Monroe), NY' };
-const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto', location: KJ_LOCATION, clockMode: 'digital' };
+const KJ_LOCATION = { lat: 41.3307, lon: -74.1868, label: 'Kiryas Joel (Monroe), NY' };
+const DEFAULTS = { candleLightingMinutes: 18, havdalahMinutes: 72, tzeitMinutes: 45, theme: 'auto', location: null, homeLocation: null, clockMode: 'digital' };
 
 function loadSettings(){
   try {
     const raw = localStorage.getItem('zmanSettings');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const merged = Object.assign({}, DEFAULTS, parsed);
-      merged.location = Object.assign({}, KJ_LOCATION, parsed.location || {});
-      return merged;
-    }
+    if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
   } catch(e){}
-  return Object.assign({}, DEFAULTS, { location: Object.assign({}, KJ_LOCATION) });
+  return Object.assign({}, DEFAULTS);
 }
 function saveSettings(s){
   try { localStorage.setItem('zmanSettings', JSON.stringify(s)); } catch(e){}
 }
 let settings = loadSettings();
 
-/* ----- Location: defaults to Kiryas Joel; can switch to GPS/Wi-Fi location
-   (for using this as a personal phone app anywhere) or a manually-entered
-   spot. Whatever is chosen is remembered on this device and used for every
-   zmanim calculation until changed again. ----- */
-function currentLat(){ return settings.location.lat; }
-function currentLon(){ return settings.location.lon; }
+/* ----- Location -----
+   One simple rule, the same for every device: whenever this app can get a
+   real location fix (device location is on, permission granted, online
+   enough for the OS to resolve it), it uses that — and it keeps quietly
+   re-checking in the background, so if you actually travel, the zmanim
+   travel with you automatically. The moment it CAN'T get a fix (location
+   turned off, permission denied, etc.), it simply keeps using the last
+   real location it had — nothing resets, nothing needs configuring. Before
+   any real fix has ever been obtained, it uses Kiryas Joel purely as a
+   silent starting point for calculations — never shown to the person as
+   their "home."
 
-function useKiryasJoel(){
-  settings.location = Object.assign({}, KJ_LOCATION);
+   "Home" is a separate, personal idea: whatever real place this device
+   FIRST actually connected from, remembered permanently from that point on.
+   For this specific deployment that will naturally turn out to be Kiryas
+   Joel, since that's where the tablet will first connect — but the code
+   itself has no idea that's the answer; on anyone else's copy of this app,
+   their own first real location becomes their own "Home" automatically,
+   with nothing to configure. The Home button always shows that real place
+   by name, never a hardcoded location. */
+function currentLat(){ return (settings.location || KJ_LOCATION).lat; }
+function currentLon(){ return (settings.location || KJ_LOCATION).lon; }
+function currentLocationLabel(){ return (settings.location || KJ_LOCATION).label; }
+
+function setLocation(loc){
+  settings.location = loc;
   saveSettings(settings);
-  cachedDayKey = null;
+  cachedDayKey = null; // recalculate everything, including zmanim, for the new spot
   updateLocationStatus();
 }
 
-function useMyLocation(){
+// Turns coordinates into a real place name (e.g. "Monroe, NY") using a free,
+// no-API-key reverse-geocoding lookup. If it fails (offline, blocked, etc.)
+// callers just keep the coordinate-based label — nothing breaks.
+async function reverseGeocodeLabel(lat, lon){
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const city = data.city || data.locality;
+    const region = data.principalSubdivisionCode ? data.principalSubdivisionCode.split('-').pop() : data.principalSubdivision;
+    if (city && region) return `${city}, ${region}`;
+    return city || region || null;
+  } catch (e) { return null; }
+}
+
+function homeButtonLabel(){
+  return settings.homeLocation ? ('🏠 ' + settings.homeLocation.label) : '🏠 Set Home Location';
+}
+function updateHomeButton(){
+  const btn = document.getElementById('useKjBtn');
+  if (btn) btn.textContent = homeButtonLabel();
+}
+
+// The Home button: if a home has already been captured, go back to it.
+// If not (this device has never gotten a real fix yet), this becomes the
+// moment that captures one, the same as the Refresh button would.
+function goHome(){
+  if (settings.homeLocation) setLocation(Object.assign({}, settings.homeLocation));
+  else refreshLocation(false);
+}
+
+// silent = true for the automatic background checks (on load, on Wi-Fi
+// reconnect, periodically) — failures there just do nothing and leave the
+// last known location exactly as it was. silent = false is for the manual
+// "Refresh My Location Now" button, which reports what happened.
+function refreshLocation(silent){
   const statusEl = document.getElementById('locationStatus');
   if (!('geolocation' in navigator)) {
-    statusEl.textContent = 'This device/browser does not support location.';
+    if (!silent && statusEl) statusEl.textContent = 'This device/browser does not support location.';
     return;
   }
-  statusEl.textContent = 'Finding your location…';
+  if (!silent && statusEl) statusEl.textContent = 'Finding your location…';
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      settings.location = {
-        mode: 'auto',
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        label: `Your Location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`
-      };
-      saveSettings(settings);
-      cachedDayKey = null;
-      updateLocationStatus();
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      const loc = { lat, lon, label: `Your Location (${lat.toFixed(3)}, ${lon.toFixed(3)})` };
+      setLocation(loc);
+
+      // The very first real fix this device ever gets becomes its permanent Home.
+      if (!settings.homeLocation) {
+        settings.homeLocation = Object.assign({}, loc);
+        saveSettings(settings);
+        updateHomeButton();
+      }
+
+      // Upgrade the coordinate label to a real place name in the background, if possible.
+      reverseGeocodeLabel(lat, lon).then((nice) => {
+        if (!nice) return;
+        if (settings.location && settings.location.lat === lat && settings.location.lon === lon) settings.location.label = nice;
+        if (settings.homeLocation && settings.homeLocation.lat === lat && settings.homeLocation.lon === lon) settings.homeLocation.label = nice;
+        saveSettings(settings);
+        updateLocationStatus();
+        updateHomeButton();
+      });
     },
     (err) => {
-      let msg = 'Could not get your location.';
-      if (err.code === err.PERMISSION_DENIED) msg = 'Location permission was denied — allow it in your browser/phone settings, or use Kiryas Joel (default).';
-      statusEl.textContent = msg;
+      // Location is off / permission denied / can't resolve right now —
+      // stay exactly where we last were. Only the manual button explains why.
+      if (!silent && statusEl) {
+        statusEl.textContent = (err.code === err.PERMISSION_DENIED)
+          ? `Location permission is off — staying at: ${currentLocationLabel()}`
+          : `Could not get a location fix right now — staying at: ${currentLocationLabel()}`;
+      }
     },
-    { enableHighAccuracy: false, timeout: 15000, maximumAge: 3600000 }
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 1800000 }
   );
 }
 
 function updateLocationStatus(){
   const statusEl = document.getElementById('locationStatus');
-  if (statusEl) statusEl.textContent = 'Currently using: ' + settings.location.label;
+  if (statusEl) statusEl.textContent = 'Currently using: ' + currentLocationLabel();
   const footerLoc = document.getElementById('footerLocation');
-  if (footerLoc) footerLoc.textContent = settings.location.label;
+  if (footerLoc) footerLoc.textContent = currentLocationLabel();
 }
+
+// (the automatic background refresh triggers — on load, on reconnect, and
+// periodically — are wired up further below, after all clock/date
+// variables exist, to avoid referencing them before they're declared)
+
 
 /* ===================== Clock + date rendering ===================== */
 const clockEl = document.getElementById('clock');
@@ -709,6 +876,9 @@ function tick(){
 
 setInterval(tick, 1000);
 tick();
+refreshLocation(true); // check for a real fix right away, silently
+window.addEventListener('online', () => refreshLocation(true));
+setInterval(() => refreshLocation(true), 60 * 60 * 1000);
 
 /* ===================== Settings panel ===================== */
 const gearBtn = document.getElementById('gearBtn');
@@ -722,11 +892,13 @@ function openSettings(){
   havdalahMinInput.value = settings.havdalahMinutes;
   tzeitMinInput.value = settings.tzeitMinutes;
   updateLocationStatus();
+  updateHomeButton();
   settingsPanel.classList.add('show');
 }
 gearBtn.addEventListener('click', openSettings);
-document.getElementById('useKjBtn').addEventListener('click', useKiryasJoel);
-document.getElementById('useMyLocationBtn').addEventListener('click', useMyLocation);
+document.getElementById('useKjBtn').addEventListener('click', goHome);
+document.getElementById('useMyLocationBtn').addEventListener('click', () => refreshLocation(false));
+updateHomeButton();
 updateLocationStatus();
 document.getElementById('closeSettings').addEventListener('click', () => {
   settings.candleLightingMinutes = parseInt(candleMinInput.value, 10) || DEFAULTS.candleLightingMinutes;
@@ -798,7 +970,8 @@ updateLastSyncFooter();
 
 /* ===================== Print: selectable date-range calendar ===================== */
 document.getElementById('printBtn').addEventListener('click', () => {
-  const monthCount = parseInt(document.getElementById('printRangeSelect').value, 10) || 1;
+  const customVal = parseInt(document.getElementById('printCustomMonths').value, 10);
+  const monthCount = (customVal > 0) ? customVal : (parseInt(document.getElementById('printRangeSelect').value, 10) || 1);
   buildPrintCalendarRange(monthCount);
   settingsPanel.classList.remove('show');
   setTimeout(() => window.print(), 200);
@@ -870,6 +1043,74 @@ function buildPrintCalendarRange(monthCount){
   }
   document.getElementById('printArea').innerHTML = html;
 }
+
+/* ===================== On-screen Jewish Calendar (browse any month) ===================== */
+let calYear, calMonth; // 1-based month, set when opened
+
+function openCalendar(){
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth() + 1;
+  renderCalendarMonth();
+  document.getElementById('calendarModal').classList.add('show');
+}
+function closeCalendar(){
+  document.getElementById('calendarModal').classList.remove('show');
+}
+function calPrevMonth(){ calMonth -= 1; if (calMonth < 1) { calMonth = 12; calYear -= 1; } renderCalendarMonth(); }
+function calNextMonth(){ calMonth += 1; if (calMonth > 12) { calMonth = 1; calYear += 1; } renderCalendarMonth(); }
+
+function renderCalendarMonth(){
+  const y = calYear, m = calMonth;
+  document.getElementById('calMonthEn').textContent = `${MONTH_NAMES_EN[m-1]} ${y}`;
+
+  const firstHeb = HebrewEngine.jdnToHebrew(HebrewEngine.gregorianToJDN(y, m, 1));
+  document.getElementById('calMonthHe').textContent = `${firstHeb.monthNameHebrew} ${HebrewEngine.hebrewYearString(firstHeb.year)}`;
+
+  const today = new Date();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstDowJS = new Date(y, m - 1, 1).getDay();
+
+  const dowHeads = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="calDowHead">${d}</div>`).join('');
+
+  let cells = '';
+  for (let i = 0; i < firstDowJS; i++) cells += '<div class="calDay empty"></div>';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const jdn = HebrewEngine.gregorianToJDN(y, m, day);
+    const hebDate = HebrewEngine.jdnToHebrew(jdn);
+    const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
+    const omer = HebrewEngine.getOmerDay(jdn, hebDate.year);
+    const jsDate = new Date(y, m - 1, day);
+    const dow = jsDate.getDay();
+    const isToday = (y === today.getFullYear() && m === today.getMonth() + 1 && day === today.getDate());
+
+    let zmanLine = '';
+    const z = ZmanimEngine.getZmanim(jsDate, currentLat(), currentLon(), settings);
+    if (z) {
+      if (dow === 5) zmanLine = `🕯 ${z.candleLighting.text}`;
+      else if (dow === 6) zmanLine = `✡ ${z.havdalah.text}`;
+    }
+
+    cells += `<div class="calDay ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}">
+      <div class="calNum">${day}</div>
+      <div class="calHeb">${hebDate.day} ${hebDate.monthName}</div>
+      ${holiday ? `<div class="calHoliday">${holiday.name}</div>` : ''}
+      ${omer ? `<div class="calZman">Omer: ${omer}</div>` : ''}
+      ${zmanLine ? `<div class="calZman">${zmanLine}</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('calendarGrid').innerHTML = dowHeads + cells;
+}
+
+document.getElementById('calendarBtn').addEventListener('click', openCalendar);
+document.getElementById('calCloseBtn').addEventListener('click', closeCalendar);
+document.getElementById('calPrevBtn').addEventListener('click', calPrevMonth);
+document.getElementById('calNextBtn').addEventListener('click', calNextMonth);
+document.getElementById('calendarModal').addEventListener('click', (e) => {
+  if (e.target.id === 'calendarModal') closeCalendar(); // tap outside the card to close
+});
 
 /* ===================== Service worker registration ===================== */
 if ('serviceWorker' in navigator) {
