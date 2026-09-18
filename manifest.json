@@ -1,7 +1,7 @@
 {
-  "name": "Zman & Luach -",
+  "name": "Zman & Luach",
   "short_name": "Zman & Luach",
-  "description": "Offline clock, Hebrew calendar, and zmanim for Kiryas Joel (Monroe), NY",
+  "description": "Offline clock, Hebrew calendar, and zmanim for your location",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
