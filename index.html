@@ -240,6 +240,52 @@
     color: var(--fg-soft);
   }
 
+  /* =====================================================================
+     "Normal Calendar" home screen — a professional dashboard look for
+     that user mode, matching the Luach calendar's own design language,
+     instead of the ambient wall-clock display used in Elderly mode.
+     ===================================================================== */
+  #normalHome{
+    display:none;
+    position:fixed; inset:0;
+    background:#f7f5ef; color:#161616;
+    overflow-y:auto;
+  }
+  #normalHome.show{ display:block; }
+  #nhTopBar{
+    display:flex; align-items:center; gap:16px;
+    padding:16px 24px;
+    background:#fff; border-bottom:1px solid #e3e6ea;
+    position:sticky; top:0; z-index:5; flex-wrap:wrap;
+  }
+  #nhBrand{ font-weight:800; letter-spacing:1px; font-size:18px; }
+  #nhTopDate{ color:#999; font-size:14.5px; flex:1 1 auto; }
+  #nhTopActions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  #nhBody{ max-width:760px; margin:0 auto; padding:24px 20px 60px; display:flex; flex-direction:column; gap:18px; }
+  .nhCard{ background:#fff; border:1px solid #e3e6ea; border-radius:16px; padding:22px 24px; }
+
+  #nhDateCard{ text-align:center; }
+  #nhClock{ font-size:clamp(44px, 8vw, 68px); font-weight:200; letter-spacing:1px; font-variant-numeric:tabular-nums; color:#161616; }
+  #nhDowRow{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:6px; }
+  #nhDow{ font-size:15px; font-weight:700; color:#8a8f98; text-transform:uppercase; letter-spacing:0.5px; }
+  #nhHolidayPill{ display:none; background:#173d6b; color:#fff; font-size:12.5px; font-weight:700; padding:3px 10px; border-radius:999px; }
+  #nhHolidayPill.show{ display:inline-block; }
+  #nhEngDate{ margin-top:10px; font-size:15px; color:#666; }
+  #nhHebDate{ margin-top:2px; font-size:16px; direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; color:#333; }
+
+  #nhZmanimGrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  #nhRemindersCard.hidden{ display:none; }
+  #nhRemindersList .noteRow{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; margin-bottom:6px; background:#eef0f3; border-radius:8px; }
+  #nhRemindersList .noteRow:last-child{ margin-bottom:0; }
+  #nhRemindersList .noteText{ flex:1; font-size:14px; color:#222; }
+  #nhRemindersList .noteTime{ font-size:12px; color:#8a8f98; margin-top:3px; font-weight:600; }
+
+  @media (max-width:640px){
+    #nhTopDate{ display:none; }
+    #nhTopActions .calTopBtn{ font-size:13px; padding:0.5em 0.75em; }
+  }
+
   /* ---------- Discreet controls ---------- */
   #gearBtn{
     position:fixed; top:0; right:0;
@@ -680,6 +726,38 @@
   <div id="zmanim"></div>
 
   <div id="footer"><span id="footerLocation">Finding location…</span></div>
+</div>
+
+<div id="normalHome">
+  <div id="nhTopBar">
+    <span id="nhBrand">LUACH</span>
+    <span id="nhTopDate"></span>
+    <div id="nhTopActions">
+      <button id="nhCalendarBtn" class="calTopBtn">📅 Full Calendar</button>
+      <button id="nhSettingsBtn" class="calTopBtn">⚙️ Settings</button>
+    </div>
+  </div>
+  <div id="nhBody">
+    <div class="nhCard" id="nhDateCard">
+      <div id="nhClock"></div>
+      <div id="nhDowRow">
+        <span id="nhDow"></span>
+        <span id="nhHolidayPill"></span>
+      </div>
+      <div id="nhEngDate"></div>
+      <div id="nhHebDate"></div>
+    </div>
+
+    <div class="nhCard">
+      <div class="ddSectionLabel">Today's Zmanim</div>
+      <div id="nhZmanimGrid"></div>
+    </div>
+
+    <div class="nhCard" id="nhRemindersCard">
+      <div class="ddSectionLabel">Today's Reminders</div>
+      <div id="nhRemindersList"></div>
+    </div>
+  </div>
 </div>
 
 <button id="gearBtn" aria-label="Settings">⚙️</button>
@@ -1500,6 +1578,49 @@ function applyTheme(now, state){
   document.body.setAttribute('data-theme', theme);
 }
 
+function renderNormalHome(){
+  if (settings.userMode !== 'normal') return;
+  const now = new Date();
+  let h = now.getHours(); const m = now.getMinutes();
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  document.getElementById('nhClock').textContent = `${h12}:${pad2(m)} ${h >= 12 ? 'PM' : 'AM'}`;
+  document.getElementById('nhTopDate').textContent = `${DOW_NAMES[now.getDay()]}, ${MONTH_NAMES_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+  if (!cachedDayState) return; // first computeDayState hasn't run yet
+  const state = cachedDayState;
+  document.getElementById('nhDow').textContent = DOW_NAMES[now.getDay()];
+  const holidayPill = document.getElementById('nhHolidayPill');
+  if (state.holiday) { holidayPill.textContent = state.holiday.name; holidayPill.classList.add('show'); }
+  else if (state.isSaturday) { holidayPill.textContent = 'Shabbos'; holidayPill.classList.add('show'); }
+  else holidayPill.classList.remove('show');
+
+  document.getElementById('nhEngDate').textContent = `${MONTH_NAMES_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  const hd = state.hebDate;
+  document.getElementById('nhHebDate').textContent = `${hd.day} ${hd.monthName} ${hd.year}`;
+
+  const z = state.zmanToday;
+  if (z) {
+    const rows = [];
+    ZMAN_ORDER.forEach((key) => {
+      if (settings.zmanShow[key] && z[key]) rows.push({ label: ZmanimEngine.ZMAN_DEFS[key].label, time: z[key].text, highlight: false });
+    });
+    if (state.erevSomething) rows.push({ label: 'Candle Lighting', time: z.candle.text, highlight: true });
+    else rows.push({ label: 'Shkiah (Sunset)', time: z.shkiah.text, highlight: false });
+    if (state.havdalahTonight) rows.push({ label: 'Havdalah', time: z.havdalah.text, highlight: true });
+    else rows.push({ label: 'Tzeis Hakochavim', time: z.tzeisEveryday.text, highlight: false });
+    document.getElementById('nhZmanimGrid').innerHTML = rows.map((r) =>
+      `<div class="zChip ${r.highlight?'zChipHighlight':''}"><span>${r.label}</span><span class="zChipTime">${r.time}</span></div>`).join('');
+  }
+
+  const key = dateKey(now.getFullYear(), now.getMonth()+1, now.getDate());
+  const list = notesFor(key);
+  document.getElementById('nhRemindersCard').classList.toggle('hidden', list.length === 0);
+  document.getElementById('nhRemindersList').innerHTML = list.map((n) =>
+    `<div class="noteRow"><div><div class="noteText">${escapeHtml(n.text)}</div>${n.notify ? `<div class="noteTime">🔔 ${n.time}</div>` : ''}</div></div>`).join('');
+}
+document.getElementById('nhCalendarBtn').addEventListener('click', openCalendar);
+document.getElementById('nhSettingsBtn').addEventListener('click', openSettings);
+
 function tick(){
   const now = new Date();
   renderClock(now);
@@ -1517,6 +1638,7 @@ function tick(){
   }
   if (cachedDayState) applyTheme(now, cachedDayState);
   checkNotifications(now, cachedDayState || {});
+  renderNormalHome();
 }
 
 setInterval(tick, 1000);
@@ -1616,8 +1738,14 @@ function openSettings(){
   settingsPanel.classList.add('show');
 }
 function applyUserMode(){
+  const isNormal = settings.userMode === 'normal';
   const calBtn = document.getElementById('calendarBtn');
-  if (calBtn) calBtn.style.display = (settings.userMode === 'normal') ? '' : 'none';
+  const gearBtnEl = document.getElementById('gearBtn');
+  if (calBtn) calBtn.style.display = isNormal ? 'none' : ''; // normal mode uses its own top-bar button instead
+  if (gearBtnEl) gearBtnEl.style.display = isNormal ? 'none' : ''; // ditto for settings
+  document.getElementById('app').style.display = isNormal ? 'none' : '';
+  document.getElementById('normalHome').classList.toggle('show', isNormal);
+  if (isNormal) renderNormalHome();
 }
 function updateUserModeCards(){
   document.querySelectorAll('.userModeCard').forEach((card) => {
@@ -2155,7 +2283,7 @@ function renderDayNotes(){
       deleteNoteFor(key, btn.getAttribute('data-id'));
       renderDayNotes(); renderCalendarMonth();
       const today = new Date();
-      if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) renderTodayReminder(today);
+      if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) { renderTodayReminder(today); renderNormalHome(); }
     });
   });
 }
@@ -2170,7 +2298,7 @@ document.getElementById('dayAddNoteBtn').addEventListener('click', () => {
   document.getElementById('dayNewNoteTimeWrap').classList.add('hidden');
   renderDayNotes(); renderCalendarMonth();
   const today = new Date();
-  if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) renderTodayReminder(today);
+  if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) { renderTodayReminder(today); renderNormalHome(); }
 });
 document.getElementById('dayDetailBackBtn').addEventListener('click', () => document.getElementById('dayDetailModal').classList.remove('show'));
 document.getElementById('dayDetailModal').addEventListener('click', (e) => { if (e.target.id==='dayDetailModal') document.getElementById('dayDetailModal').classList.remove('show'); });
