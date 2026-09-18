@@ -358,6 +358,24 @@
   #setupCard .row{ display:flex; gap:12px; flex-wrap:wrap; margin:10px 0; }
   #setupCard button{ font-size:17px; padding:12px 18px; border-radius:10px; border:2px solid #173d6b; background:#173d6b; color:#fff; cursor:pointer; }
   #setupCard button.secondary{ background:#fff; color:#173d6b; }
+
+  /* ---------- Precision explainer (shown once, before first-time setup) ---------- */
+  #precisionInfoModal{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:205;
+    align-items:center; justify-content:center;
+  }
+  #precisionInfoModal.show{ display:flex; }
+  #precisionInfoCard{
+    background:#fff; color:#111; width:min(560px, 92vw); max-height:88vh; overflow:auto;
+    border-radius:18px; padding: 30px 32px; font-size:18px; line-height:1.5;
+  }
+  #precisionInfoCard h2{ margin-top:0; }
+  #precisionInfoCard p{ margin:14px 0; }
+  #precisionInfoCard button{
+    display:block; width:100%; margin-top:20px;
+    font-size:18px; padding:14px; font-weight:700;
+    border-radius:10px; border:2px solid #173d6b; background:#173d6b; color:#fff; cursor:pointer;
+  }
   #setupFinishBtn{ margin-top: 22px; width:100%; }
   #setupCard .hint{ color:#555; font-size:14px; line-height:1.4; }
 
@@ -385,70 +403,153 @@
   }
   #calendarBtn:active{ transform: scale(0.94); }
 
+  /* =====================================================================
+     Calendar — redesigned as a real week/month calendar app (sidebar with
+     a mini-month navigator and toggleable layers, colored event chips).
+     Always a clean light theme, like the reference design, regardless of
+     the app's own day/night mode — this is a utility screen, not the ambient
+     clock display.
+     ===================================================================== */
   #calendarModal{
     display:none;
     position:fixed; inset:0;
-    background: var(--bg);
+    background: #f7f5ef;
     z-index: 90;
   }
   #calendarModal.show{ display:block; }
   #calendarCard{
-    background: var(--bg); color: var(--fg);
     width:100vw; height:100vh; height:100dvh;
-    padding: 2vh 3vw;
+    color:#161616;
     display:flex; flex-direction:column;
-    gap: 1.6vh;
     box-sizing: border-box;
   }
-  #calendarHeader{
-    display:flex; align-items:center; gap:2vw;
-    flex: 0 0 auto;
+  #calTopBar{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:16px;
+    padding: 14px 20px;
+    background:#fff; border-bottom:1px solid #e3e6ea;
   }
   #calBackBtn{
-    font-size: clamp(18px, 2.2vw, 26px);
-    font-weight:700;
-    background: var(--panel); color: var(--fg);
-    border: 2px solid var(--line); border-radius: 12px;
-    padding: 0.5em 1em; cursor:pointer;
-    flex: 0 0 auto;
+    font-size:15px; font-weight:700;
+    background:#f2f4f7; color:#161616;
+    border:1px solid #e3e6ea; border-radius:10px;
+    padding:0.6em 1em; cursor:pointer; flex:0 0 auto;
   }
-  #calendarTitle{ text-align:center; flex: 1 1 auto; }
-  #calMonthEn{ font-size: clamp(28px, 4.2vw, 48px); font-weight:800; }
-  #calMonthHe{ font-size: clamp(18px, 2.6vw, 30px); direction:rtl; color: var(--fg-soft); font-family:"Times New Roman","Arial Hebrew",serif; }
-  .navBtn{
-    font-size: clamp(24px, 3vw, 36px);
-    background: var(--panel); color: var(--fg);
-    border: 2px solid var(--line); border-radius: 12px;
-    padding: 0.3em 0.6em; cursor:pointer;
-    flex: 0 0 auto;
+  #calTitleGroup{ flex:1 1 auto; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; overflow:hidden; }
+  #calBrand{ font-weight:800; letter-spacing:1px; font-size: clamp(14px,1.6vw,18px); color:#161616; }
+  #calTitleMain{ font-weight:800; font-size: clamp(16px,2vw,22px); white-space:nowrap; }
+  .calTitleSep{ color:#aaa; }
+  #calTitleHeb{ direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; color:#666; font-size: clamp(13px,1.6vw,16px); white-space:nowrap; }
+  #calTopActions{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; }
+  .calTopBtn{
+    font-size:14px; font-weight:700; padding:0.55em 0.9em;
+    border-radius:9px; border:1px solid #e3e6ea; background:#fff; color:#161616; cursor:pointer;
   }
+  .calTopBtn:hover{ background:#f2f4f7; }
+
+  #calLayout{ flex:1 1 auto; display:flex; overflow:hidden; position:relative; }
+  #calSidebarOverlay{ display:none; position:absolute; inset:0; background:rgba(0,0,0,0.4); z-index:8; }
+  #calSidebarOverlay.show{ display:block; }
+
+  #calSidebar{
+    flex:0 0 260px; background:#fff; border-right:1px solid #e3e6ea;
+    padding:18px 16px; overflow-y:auto;
+  }
+  #miniNavHeader{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  #miniNavTitle{ font-weight:800; font-size:15px; }
+  #miniNavHeader .navBtn{ font-size:13px; padding:0.3em 0.55em; border-radius:8px; background:#f2f4f7; border:1px solid #e3e6ea; color:#161616; cursor:pointer; }
+  #miniDowRow{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:#999; margin-bottom:4px; }
+  #miniGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:20px; }
+  .miniCell{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:12.5px; border-radius:50%; cursor:pointer; color:#333;
+  }
+  .miniCell:hover{ background:#f2f4f7; }
+  .miniCell.empty{ visibility:hidden; cursor:default; }
+  .miniCell.today{ background:#161616; color:#fff; font-weight:700; }
+  .miniCell.selected:not(.today){ background:#e7c874; font-weight:700; }
+  .miniCell.holidayDot{ box-shadow: inset 0 -3px 0 #b8860b; }
+
+  #calLayersTitle{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#999; margin:6px 0 10px; }
+  .calLayerRow{ display:flex; align-items:center; gap:10px; padding:7px 0; font-size:14.5px; cursor:pointer; }
+  .calLayerRow input[type=checkbox]{ width:17px; height:17px; accent-color:#161616; cursor:pointer; }
+  .calLayerSwatch{ width:13px; height:13px; border-radius:4px; flex:0 0 auto; }
+  .swatchReminders{ background:#8a8f98; }
+  .swatchHolidays{ background:#161616; }
+  .swatchCandle{ background:#c98a1f; }
+  .swatchZmanim{ background:#b7bdc6; }
+
+  #calMainArea{ flex:1 1 auto; overflow:auto; padding:16px; background:#f7f5ef; }
+
+  /* ---------- Week view ---------- */
+  #calWeekGrid{ display:none; grid-template-columns: repeat(7, minmax(150px,1fr)); gap:10px; min-width: 1000px; }
+  #calWeekGrid.show{ display:grid; }
+  .weekDayCol{ background:#fff; border:1px solid #e3e6ea; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-height:60vh; }
+  .weekDayHead{ padding:10px 10px 8px; text-align:center; border-bottom:1px solid #eef0f3; cursor:pointer; }
+  .weekDayHead:hover{ background:#fafbfc; }
+  .weekDayCol.today .weekDayHead{ background:#fdf6e3; }
+  .weekDowLabel{ font-size:11.5px; font-weight:800; letter-spacing:0.5px; color:#999; }
+  .weekDayCol.today .weekDowLabel{ color:#b8860b; }
+  .weekDateNum{ font-size:20px; font-weight:800; margin-top:2px; }
+  .weekHebDate{ font-size:11.5px; color:#999; direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; margin-top:2px; }
+  .weekChips{ padding:10px; display:flex; flex-direction:column; gap:6px; flex:1 1 auto; }
+  .chip{
+    border-radius:8px; padding:7px 9px; font-size:12.5px; font-weight:600;
+    line-height:1.3; cursor:pointer;
+  }
+  .chip.chipHoliday{ background:#161616; color:#fff; }
+  .chip.chipReminder{ background:#eef0f3; color:#222; }
+  .chip.chipZman{ background:#f3f4f6; color:#444; font-weight:500; }
+  .chip.chipCandle{ background:#fdf1d6; color:#7a5b00; border:1px solid #eecf8f; font-weight:700; }
+  .weekAddBtn{
+    margin:6px 10px 10px; padding:8px; border-radius:8px; border:1.5px dashed #d5dae0;
+    background:none; color:#8a8f98; font-size:12.5px; cursor:pointer;
+  }
+  .weekAddBtn:hover{ background:#fafbfc; color:#555; }
+
+  /* ---------- Month view (compact grid) ---------- */
   #calendarGrid{
-    display:grid; grid-template-columns: repeat(7, 1fr);
-    gap: 0.8vh 0.6vw;
-    overflow-y:auto;
-    flex: 1 1 auto;
+    display:none; grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
   }
+  #calendarGrid.show{ display:grid; }
   .calDowHead{
-    text-align:center; font-weight:700; font-size: clamp(14px, 1.8vw, 22px);
-    color: var(--fg-soft); padding-bottom: 0.4vh;
+    text-align:center; font-weight:800; font-size:13px;
+    color:#999; padding-bottom:6px;
   }
   .calDay{
-    border: 2px solid var(--line); border-radius: 12px;
-    padding: 0.8vh 0.5vw;
-    min-height: 12vh;
-    background: var(--panel);
+    border: 1px solid #e3e6ea; border-radius: 10px;
+    padding: 8px; min-height: 12vh;
+    background: #fff;
     display:flex; flex-direction:column;
     cursor:pointer; position:relative;
   }
-  .calNoteDot{ position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--accent); }
-  .calDay.empty{ visibility:hidden; cursor:default; }
-  .calDay.today{ border-color: var(--accent); border-width:4px; }
-  .calDay.holiday{ background: rgba(23,61,107,0.10); }
-  [data-theme="night"] .calDay.holiday{ background: rgba(231,217,168,0.13); }
-  .calNum{ font-weight:800; font-size: clamp(18px, 2.2vw, 28px); }
-  .calHeb{ font-size: clamp(12px, 1.4vw, 17px); color: var(--fg-soft); direction:rtl; }
-  .calHoliday{ font-size: clamp(12px, 1.4vw, 17px); font-weight:700; color: var(--accent); margin-top:auto; }
-  .calZman{ font-size: clamp(11px, 1.2vw, 15px); color: var(--fg-soft); }
+  .calDay:hover{ background:#fafbfc; }
+  .calNoteDot{ position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#8a8f98; }
+  .calDay.empty{ visibility:hidden; cursor:default; background:none; border:none; }
+  .calDay.today{ border-color:#161616; border-width:2px; background:#fdf6e3; }
+  .calDay.holiday .calHoliday{ color:#161616; }
+  .calNum{ font-weight:800; font-size:15px; }
+  .calHeb{ font-size:11px; color:#999; direction:rtl; font-family:"Times New Roman","Arial Hebrew",serif; }
+  .calHoliday{ font-size:11px; font-weight:700; color:#7a5b00; margin-top:auto; }
+  .calZman{ font-size:10.5px; color:#999; }
+
+  /* ---------- Responsive: phone ---------- */
+  @media (max-width: 860px){
+    #calSidebar{
+      position:absolute; top:0; bottom:0; left:0; z-index:9;
+      width:min(280px, 80vw); transform:translateX(-100%);
+      transition:transform .25s ease; box-shadow:2px 0 12px rgba(0,0,0,0.15);
+    }
+    #calSidebar.show{ transform:translateX(0); }
+    .calFiltersOnly{ display:inline-block; }
+    #calTitleGroup{ gap:4px; }
+    #calBrand{ display:none; }
+    #calWeekGrid{ min-width: 760px; }
+  }
+  @media (min-width: 861px){
+    .calFiltersOnly{ display:none; }
+  }
 
   /* ---------- Day detail modal (reminders, per-day zmanim, single-day print) ---------- */
   #dayDetailModal{ display:none; position:fixed; inset:0; background: var(--bg); z-index:95; }
@@ -497,7 +598,7 @@
   #printArea{ display:none; }
 
   @media print{
-    #gearBtn, #settingsPanel, #calendarBtn, #calendarModal, #dayDetailModal, #setupModal, #setupToast { display:none !important; }
+    #gearBtn, #settingsPanel, #calendarBtn, #calendarModal, #dayDetailModal, #setupModal, #setupToast, #precisionInfoModal { display:none !important; }
     #app{ display:none !important; }
     body{ overflow:visible; background:#fff; color:#000; }
     #printArea{
@@ -549,16 +650,47 @@
 
 <div id="calendarModal">
   <div id="calendarCard">
-    <div id="calendarHeader">
-      <button id="calBackBtn" aria-label="Back">← Back</button>
-      <button id="calPrevBtn" class="navBtn">◀</button>
-      <div id="calendarTitle">
-        <div id="calMonthEn">Month Year</div>
-        <div id="calMonthHe">Hebrew Month Year</div>
+    <div id="calTopBar">
+      <button id="calBackBtn">← Back</button>
+      <div id="calTitleGroup">
+        <span id="calBrand">LUACH</span>
+        <span id="calTitleMain"></span>
+        <span class="calTitleSep">·</span>
+        <span id="calTitleHeb"></span>
       </div>
-      <button id="calNextBtn" class="navBtn">▶</button>
+      <div id="calTopActions">
+        <button id="calPrevBtn" class="calTopBtn navBtn">◀</button>
+        <button id="calTodayBtn" class="calTopBtn">Today</button>
+        <button id="calNextBtn" class="calTopBtn navBtn">▶</button>
+        <button id="calViewToggleBtn" class="calTopBtn">📅 Month View</button>
+        <button id="calFiltersToggleBtn" class="calTopBtn calFiltersOnly">☰ Filters</button>
+      </div>
     </div>
-    <div id="calendarGrid"></div>
+    <div id="calLayout">
+      <div id="calSidebarOverlay"></div>
+      <div id="calSidebar">
+        <div id="miniNavHeader">
+          <button id="miniPrevBtn" class="navBtn">◀</button>
+          <span id="miniNavTitle"></span>
+          <button id="miniNextBtn" class="navBtn">▶</button>
+        </div>
+        <div id="miniDowRow">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div id="miniGrid"></div>
+
+        <div id="calLayersTitle">Calendars &amp; Zmanim</div>
+        <label class="calLayerRow"><input type="checkbox" id="layerReminders" checked><span class="calLayerSwatch swatchReminders"></span> Reminders</label>
+        <label class="calLayerRow"><input type="checkbox" id="layerHolidays" checked><span class="calLayerSwatch swatchHolidays"></span> Shabbos &amp; Yom Tov</label>
+        <label class="calLayerRow"><input type="checkbox" id="layerCandle" checked><span class="calLayerSwatch swatchCandle"></span> Candle Lighting / Havdalah</label>
+        <label class="calLayerRow"><input type="checkbox" id="layerZmanim" checked><span class="calLayerSwatch swatchZmanim"></span> Daily Zmanim</label>
+      </div>
+
+      <div id="calMainArea">
+        <div id="calWeekGrid"></div>
+        <div id="calendarGrid"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -734,6 +866,27 @@
       </div>
 
     </div>
+  </div>
+</div>
+
+<div id="precisionInfoModal">
+  <div id="precisionInfoCard">
+    <h2>Before we set up — one thing to know</h2>
+    <p>
+      You might notice this app's zmanim are off by a minute, or even just
+      a few seconds, compared to other zmanim apps or calendars you've used
+      before.
+    </p>
+    <p>
+      <strong>That's not a mistake — it's actually more accurate.</strong>
+      This app calculates directly from your device's real GPS location, not
+      from a general area or zip code the way many other zmanim apps and
+      calendars do. Two spots in the same town can have very slightly
+      different sunrise and sunset times — this app uses the exact one
+      you're standing in, so small differences from other apps are a sign
+      of extra precision, not an error.
+    </p>
+    <button id="precisionInfoContinueBtn">Got it — Continue</button>
   </div>
 </div>
 
@@ -1488,7 +1641,11 @@ document.getElementById('setupFinishBtn').addEventListener('click', () => {
   document.getElementById('setupModal').classList.remove('show');
   showSetupToast();
 });
-if (!settings.setupCompleted) openSetupWizard();
+document.getElementById('precisionInfoContinueBtn').addEventListener('click', () => {
+  document.getElementById('precisionInfoModal').classList.remove('show');
+  openSetupWizard();
+});
+if (!settings.setupCompleted) document.getElementById('precisionInfoModal').classList.add('show');
 
 document.getElementById('themeAuto').addEventListener('click', () => { settings.theme='auto'; saveSettings(settings); });
 document.getElementById('themeDay').addEventListener('click', () => { settings.theme='day'; saveSettings(settings); document.body.setAttribute('data-theme','day'); });
@@ -1595,61 +1752,185 @@ function buildPrintCalendarRange(monthCount, includeNotes){
 }
 
 /* ===================== On-screen Jewish Calendar (browse any month) ===================== */
-let calYear, calMonth; // 1-based month, set when opened
+/* ===================== Calendar: week/month views, mini navigator, layers ===================== */
+let calViewMode = 'week';
+let calWeekStart;       // Date, the Sunday starting the displayed week
+let calYear, calMonth;  // 1-based month, for month view
+let miniYear, miniMonth; // 1-based month currently shown in the sidebar mini-navigator
+
+function getWeekStart(date){
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+function layerOn(id){ const el = document.getElementById(id); return el ? el.checked : true; }
 
 function openCalendar(){
   const now = new Date();
-  calYear = now.getFullYear();
-  calMonth = now.getMonth() + 1;
-  renderCalendarMonth();
+  calWeekStart = getWeekStart(now);
+  calYear = now.getFullYear(); calMonth = now.getMonth() + 1;
+  miniYear = calYear; miniMonth = calMonth;
+  calViewMode = 'week';
+  updateViewToggleLabel();
+  renderCalendarAll();
   document.getElementById('calendarModal').classList.add('show');
 }
 function closeCalendar(){
   document.getElementById('calendarModal').classList.remove('show');
+  closeCalSidebarDrawer();
 }
-function calPrevMonth(){ calMonth -= 1; if (calMonth < 1) { calMonth = 12; calYear -= 1; } renderCalendarMonth(); }
-function calNextMonth(){ calMonth += 1; if (calMonth > 12) { calMonth = 1; calYear += 1; } renderCalendarMonth(); }
+function updateViewToggleLabel(){
+  document.getElementById('calViewToggleBtn').textContent = calViewMode === 'week' ? '📅 Month View' : '📆 Week View';
+  document.getElementById('calWeekGrid').classList.toggle('show', calViewMode === 'week');
+  document.getElementById('calendarGrid').classList.toggle('show', calViewMode === 'month');
+}
+function calToggleView(){
+  calViewMode = calViewMode === 'week' ? 'month' : 'week';
+  updateViewToggleLabel();
+  renderCalendarAll();
+}
+function calGoToday(){
+  const now = new Date();
+  calWeekStart = getWeekStart(now);
+  calYear = now.getFullYear(); calMonth = now.getMonth() + 1;
+  miniYear = calYear; miniMonth = calMonth;
+  renderCalendarAll();
+}
+function calPrev(){
+  if (calViewMode === 'week') { calWeekStart.setDate(calWeekStart.getDate() - 7); }
+  else { calMonth -= 1; if (calMonth < 1) { calMonth = 12; calYear -= 1; } }
+  syncMiniToMain();
+  renderCalendarAll();
+}
+function calNext(){
+  if (calViewMode === 'week') { calWeekStart.setDate(calWeekStart.getDate() + 7); }
+  else { calMonth += 1; if (calMonth > 12) { calMonth = 1; calYear += 1; } }
+  syncMiniToMain();
+  renderCalendarAll();
+}
+function syncMiniToMain(){
+  const ref = calViewMode === 'week' ? calWeekStart : new Date(calYear, calMonth - 1, 1);
+  miniYear = ref.getFullYear(); miniMonth = ref.getMonth() + 1;
+}
+function jumpToDate(y, m, d){
+  const target = new Date(y, m - 1, d);
+  if (calViewMode === 'week') calWeekStart = getWeekStart(target);
+  else { calYear = y; calMonth = m; }
+  miniYear = y; miniMonth = m;
+  renderCalendarAll();
+  closeCalSidebarDrawer();
+}
 
+function renderCalendarAll(){
+  renderTopTitle();
+  renderMiniNav();
+  if (calViewMode === 'week') renderWeekView(); else renderCalendarMonth();
+}
+
+function renderTopTitle(){
+  if (calViewMode === 'week') {
+    const end = new Date(calWeekStart); end.setDate(end.getDate() + 6);
+    const sameMonth = calWeekStart.getMonth() === end.getMonth();
+    document.getElementById('calTitleMain').textContent = sameMonth
+      ? `${MONTH_NAMES_EN[calWeekStart.getMonth()]} ${calWeekStart.getDate()}–${end.getDate()}, ${end.getFullYear()}`
+      : `${MONTH_NAMES_EN[calWeekStart.getMonth()]} ${calWeekStart.getDate()} – ${MONTH_NAMES_EN[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    const hebStart = HebrewEngine.jdnToHebrew(HebrewEngine.gregorianToJDN(calWeekStart.getFullYear(), calWeekStart.getMonth()+1, calWeekStart.getDate()));
+    const hebEnd = HebrewEngine.jdnToHebrew(HebrewEngine.gregorianToJDN(end.getFullYear(), end.getMonth()+1, end.getDate()));
+    document.getElementById('calTitleHeb').textContent = hebStart.monthName === hebEnd.monthName
+      ? `${hebStart.monthNameHebrew} ${HebrewEngine.hebrewYearString(hebStart.year)}`
+      : `${hebStart.monthNameHebrew} – ${hebEnd.monthNameHebrew} ${HebrewEngine.hebrewYearString(hebEnd.year)}`;
+  } else {
+    document.getElementById('calTitleMain').textContent = `${MONTH_NAMES_EN[calMonth-1]} ${calYear}`;
+    const firstHeb = HebrewEngine.jdnToHebrew(HebrewEngine.gregorianToJDN(calYear, calMonth, 1));
+    document.getElementById('calTitleHeb').textContent = `${firstHeb.monthNameHebrew} ${HebrewEngine.hebrewYearString(firstHeb.year)}`;
+  }
+}
+
+/* ---------- Week view ---------- */
+function renderWeekView(){
+  const today = new Date();
+  const showReminders = layerOn('layerReminders'), showHolidays = layerOn('layerHolidays'),
+        showCandle = layerOn('layerCandle'), showZmanim = layerOn('layerZmanim');
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calWeekStart); d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+    const jdn = HebrewEngine.gregorianToJDN(y, m, day);
+    const hebDate = HebrewEngine.jdnToHebrew(jdn);
+    const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
+    const isToday = y===today.getFullYear() && m===today.getMonth()+1 && day===today.getDate();
+    const dow = d.getDay();
+    const z = ZmanimEngine.getZmanimFull(d, currentLat(), currentLon(), settings);
+    const erevSomething = dow === 5;
+    const havdalahTonight = dow === 6;
+
+    let chips = '';
+    if (showHolidays && holiday) chips += `<div class="chip chipHoliday">${holiday.name}${holiday.totalDays>1?` (${holiday.dayNum}/${holiday.totalDays})`:''}</div>`;
+    if (showCandle && z) {
+      if (erevSomething) chips += `<div class="chip chipCandle">🕯 Candle Lighting ${z.candle.text}</div>`;
+      else if (havdalahTonight) chips += `<div class="chip chipCandle">✦ Havdalah ${z.havdalah.text}</div>`;
+    }
+    if (showZmanim && z) {
+      ZMAN_ORDER.forEach((key) => {
+        if (settings.zmanShow[key] && z[key]) chips += `<div class="chip chipZman">${ZmanimEngine.ZMAN_DEFS[key].hebrew} ${z[key].text}</div>`;
+      });
+    }
+    if (showReminders) {
+      notesFor(dateKey(y,m,day)).forEach((n) => { chips += `<div class="chip chipReminder">📌 ${escapeHtml(n.text)}</div>`; });
+    }
+
+    html += `<div class="weekDayCol ${isToday?'today':''}">
+      <div class="weekDayHead" data-y="${y}" data-m="${m}" data-d="${day}">
+        <div class="weekDowLabel">${DOW_NAMES[dow].toUpperCase().slice(0,3)} ${day}</div>
+        <div class="weekHebDate">${hebDate.day} ${hebDate.monthName}</div>
+      </div>
+      <div class="weekChips">${chips}</div>
+      <button class="weekAddBtn" data-y="${y}" data-m="${m}" data-d="${day}">+ Add reminder</button>
+    </div>`;
+  }
+  const grid = document.getElementById('calWeekGrid');
+  grid.innerHTML = html;
+  grid.querySelectorAll('.weekDayHead, .weekAddBtn').forEach((el) => {
+    el.addEventListener('click', () => openDayDetail(parseInt(el.dataset.y), parseInt(el.dataset.m), parseInt(el.dataset.d)));
+  });
+}
+
+/* ---------- Month view ---------- */
 function renderCalendarMonth(){
   const y = calYear, m = calMonth;
-  document.getElementById('calMonthEn').textContent = `${MONTH_NAMES_EN[m-1]} ${y}`;
-
-  const firstHeb = HebrewEngine.jdnToHebrew(HebrewEngine.gregorianToJDN(y, m, 1));
-  document.getElementById('calMonthHe').textContent = `${firstHeb.monthNameHebrew} ${HebrewEngine.hebrewYearString(firstHeb.year)}`;
-
   const today = new Date();
   const daysInMonth = new Date(y, m, 0).getDate();
   const firstDowJS = new Date(y, m - 1, 1).getDay();
+  const showReminders = layerOn('layerReminders'), showHolidays = layerOn('layerHolidays'), showCandle = layerOn('layerCandle');
 
   const dowHeads = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="calDowHead">${d}</div>`).join('');
-
   let cells = '';
   for (let i = 0; i < firstDowJS; i++) cells += '<div class="calDay empty"></div>';
 
   for (let day = 1; day <= daysInMonth; day++) {
     const jdn = HebrewEngine.gregorianToJDN(y, m, day);
     const hebDate = HebrewEngine.jdnToHebrew(jdn);
-    const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
-    const omer = HebrewEngine.getOmerDay(jdn, hebDate.year);
+    const holiday = showHolidays ? HebrewEngine.getHolidayForJdn(jdn, hebDate.year) : null;
     const jsDate = new Date(y, m - 1, day);
     const dow = jsDate.getDay();
     const isToday = (y === today.getFullYear() && m === today.getMonth() + 1 && day === today.getDate());
 
     let zmanLine = '';
-    const z = ZmanimEngine.getZmanimFull(jsDate, currentLat(), currentLon(), settings);
-    if (z) {
-      if (dow === 5) zmanLine = `Candles: ${z.candle.text}`;
-      else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
+    if (showCandle) {
+      const z = ZmanimEngine.getZmanimFull(jsDate, currentLat(), currentLon(), settings);
+      if (z) {
+        if (dow === 5) zmanLine = `🕯 ${z.candle.text}`;
+        else if (dow === 6) zmanLine = `✦ ${z.havdalah.text}`;
+      }
     }
 
     const key = dateKey(y, m, day);
-    const hasNote = notesFor(key).length > 0;
+    const hasNote = showReminders && notesFor(key).length > 0;
 
     cells += `<div class="calDay ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}" data-y="${y}" data-m="${m}" data-d="${day}">
       <div class="calNum">${day}</div>
       <div class="calHeb">${hebDate.day} ${hebDate.monthName}</div>
       ${holiday ? `<div class="calHoliday">${holiday.name}</div>` : ''}
-      ${omer ? `<div class="calZman">Omer: ${omer}</div>` : ''}
       ${zmanLine ? `<div class="calZman">${zmanLine}</div>` : ''}
       ${hasNote ? '<div class="calNoteDot"></div>' : ''}
     </div>`;
@@ -1661,12 +1942,62 @@ function renderCalendarMonth(){
   });
 }
 
+/* ---------- Sidebar mini-navigator ---------- */
+function miniPrev(){ miniMonth -= 1; if (miniMonth < 1) { miniMonth = 12; miniYear -= 1; } renderMiniNav(); }
+function miniNext(){ miniMonth += 1; if (miniMonth > 12) { miniMonth = 1; miniYear += 1; } renderMiniNav(); }
+
+function renderMiniNav(){
+  const y = miniYear, m = miniMonth;
+  document.getElementById('miniNavTitle').textContent = `${MONTH_NAMES_EN[m-1]} ${y}`;
+  const today = new Date();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstDowJS = new Date(y, m - 1, 1).getDay();
+  let html = '';
+  for (let i = 0; i < firstDowJS; i++) html += '<div class="miniCell empty"></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isToday = y===today.getFullYear() && m===today.getMonth()+1 && day===today.getDate();
+    let isSelected = false;
+    if (calViewMode === 'week') {
+      const end = new Date(calWeekStart); end.setDate(end.getDate()+6);
+      const d = new Date(y, m-1, day);
+      isSelected = d >= calWeekStart && d <= end;
+    } else {
+      isSelected = y===calYear && m===calMonth && false; // month mode: no single-day highlight needed
+    }
+    const jdn = HebrewEngine.gregorianToJDN(y, m, day);
+    const hebDate = HebrewEngine.jdnToHebrew(jdn);
+    const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
+    html += `<div class="miniCell ${isToday?'today':''} ${isSelected?'selected':''} ${holiday?'holidayDot':''}" data-y="${y}" data-m="${m}" data-d="${day}">${day}</div>`;
+  }
+  const grid = document.getElementById('miniGrid');
+  grid.innerHTML = html;
+  grid.querySelectorAll('.miniCell:not(.empty)').forEach((cell) => {
+    cell.addEventListener('click', () => jumpToDate(parseInt(cell.dataset.y), parseInt(cell.dataset.m), parseInt(cell.dataset.d)));
+  });
+}
+
+/* ---------- Mobile sidebar drawer ---------- */
+function openCalSidebarDrawer(){
+  document.getElementById('calSidebar').classList.add('show');
+  document.getElementById('calSidebarOverlay').classList.add('show');
+}
+function closeCalSidebarDrawer(){
+  document.getElementById('calSidebar').classList.remove('show');
+  document.getElementById('calSidebarOverlay').classList.remove('show');
+}
+
 document.getElementById('calendarBtn').addEventListener('click', openCalendar);
 document.getElementById('calBackBtn').addEventListener('click', closeCalendar);
-document.getElementById('calPrevBtn').addEventListener('click', calPrevMonth);
-document.getElementById('calNextBtn').addEventListener('click', calNextMonth);
-document.getElementById('calendarModal').addEventListener('click', (e) => {
-  if (e.target.id === 'calendarModal') closeCalendar(); // tap outside the card to close
+document.getElementById('calPrevBtn').addEventListener('click', calPrev);
+document.getElementById('calNextBtn').addEventListener('click', calNext);
+document.getElementById('calTodayBtn').addEventListener('click', calGoToday);
+document.getElementById('calViewToggleBtn').addEventListener('click', calToggleView);
+document.getElementById('miniPrevBtn').addEventListener('click', miniPrev);
+document.getElementById('miniNextBtn').addEventListener('click', miniNext);
+document.getElementById('calFiltersToggleBtn').addEventListener('click', openCalSidebarDrawer);
+document.getElementById('calSidebarOverlay').addEventListener('click', closeCalSidebarDrawer);
+['layerReminders','layerHolidays','layerCandle','layerZmanim'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', () => { if (calViewMode==='week') renderWeekView(); else renderCalendarMonth(); });
 });
 
 /* ===================== Day detail: per-day zmanim, reminders, single-day print ===================== */
