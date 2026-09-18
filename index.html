@@ -381,7 +381,7 @@
     <div class="zman"><div class="label" id="z-havdalah-label">צאת הכוכבים</div><div class="time" id="z-havdalah">--:--</div></div>
   </div>
 
-  <div id="footer"><span id="footerLocation">Finding location…</span> &nbsp;·&nbsp; <span id="lastSync">not yet synced</span></div>
+  <div id="footer"><span id="footerLocation">Finding location…</span></div>
 </div>
 
 <button id="gearBtn" aria-label="Settings">⚙️</button>
@@ -939,7 +939,6 @@ async function performSync(isManual){
       if (reg) await reg.update();
     }
     localStorage.setItem('lastSync', new Date().toISOString());
-    updateLastSyncFooter();
     if (isManual) {
       statusEl.textContent = 'Up to date! Reloading…';
       setTimeout(() => window.location.reload(), 700);
@@ -960,17 +959,7 @@ window.addEventListener('online', () => performSync(false));
 // (so 'online' never fires again), still re-check every couple of hours.
 setInterval(() => { if (navigator.onLine) performSync(false); }, 2 * 60 * 60 * 1000);
 
-function updateLastSyncFooter(){
-  const raw = localStorage.getItem('lastSync');
-  const el = document.getElementById('lastSync');
-  if (raw) {
-    const d = new Date(raw);
-    el.textContent = 'last updated ' + d.toLocaleDateString();
-  } else {
-    el.textContent = 'not yet synced';
-  }
-}
-updateLastSyncFooter();
+
 
 /* ===================== Print: selectable date-range calendar ===================== */
 document.getElementById('printBtn').addEventListener('click', () => {
