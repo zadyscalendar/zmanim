@@ -663,9 +663,23 @@
   #dayNewNoteText:focus{ outline:none; border-color:#173d6b; }
   .ddNotifyRow{ display:flex; align-items:center; justify-content:space-between; margin-top:16px; }
   .ddNotifyLabel{ font-size:15px; font-weight:600; }
-  #dayNewNoteTimeWrap{ margin-top:10px; padding:10px 12px; background:#eef0f3; border-radius:10px; }
+  #dayNewNoteOptionsWrap{ margin-top:10px; }
+  #dayNewNoteOptionsWrap.hidden{ display:none; }
+  .ddNotifyTypeRow{ display:flex; gap:8px; margin-bottom:10px; }
+  .ddSegBtn{
+    flex:1 1 auto; font-size:13.5px; font-weight:700; padding:9px 10px;
+    border-radius:8px; border:1.5px solid #e3e6ea; background:#fff; color:#666; cursor:pointer;
+  }
+  .ddSegBtnActive{ background:#173d6b; border-color:#173d6b; color:#fff; }
+  #dayNewNoteTimeWrap{ padding:10px 12px; background:#eef0f3; border-radius:10px; }
   #dayNewNoteTimeWrap.hidden{ display:none; }
   #dayNewNoteTime{ font-size:15px; padding:7px; border-radius:8px; border:1.5px solid #e3e6ea; }
+  #dayNewNoteZmanWrap{ padding:10px 12px; background:#eef0f3; border-radius:10px; }
+  #dayNewNoteZmanWrap.hidden{ display:none; }
+  #dayNewNoteZman{ width:100%; box-sizing:border-box; font-size:14.5px; padding:8px; border-radius:8px; border:1.5px solid #e3e6ea; margin-bottom:8px; }
+  #dayNewNoteOffsetRow{ display:flex; gap:14px; flex-wrap:wrap; }
+  #dayNewNoteOffsetRow label{ font-size:13px; color:#555; display:flex; flex-direction:column; gap:4px; }
+  #dayNewNoteOffsetRow input{ font-size:14px; padding:6px; border-radius:8px; border:1.5px solid #e3e6ea; width:70px; }
 
   #ddButtonsRow{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
   #printBtnWrap{ flex:1 1 auto; }
@@ -765,7 +779,7 @@
     </div>
 
     <div class="nhCard" id="nhRemindersCard">
-      <div class="ddSectionLabel">Today's Reminders</div>
+      <div class="ddSectionLabel">Today's Events</div>
       <div id="nhRemindersList"></div>
     </div>
   </div>
@@ -807,7 +821,7 @@
         <div id="miniGrid"></div>
 
         <div id="calLayersTitle">Calendars &amp; Zmanim</div>
-        <label class="calLayerRow"><input type="checkbox" id="layerReminders" checked><span class="calLayerSwatch swatchReminders"></span> Reminders</label>
+        <label class="calLayerRow"><input type="checkbox" id="layerReminders" checked><span class="calLayerSwatch swatchReminders"></span> Events</label>
         <label class="calLayerRow"><input type="checkbox" id="layerHolidays" checked><span class="calLayerSwatch swatchHolidays"></span> Shabbos &amp; Yom Tov</label>
         <label class="calLayerRow"><input type="checkbox" id="layerCandle" checked><span class="calLayerSwatch swatchCandle"></span> Candle Lighting / Havdalah</label>
         <label class="calLayerRow"><input type="checkbox" id="layerZmanim" checked><span class="calLayerSwatch swatchZmanim"></span> Daily Zmanim</label>
@@ -837,21 +851,40 @@
       <hr class="ddDivider">
 
       <div id="ddExistingNotesWrap">
-        <div class="ddSectionLabel">Your Reminders</div>
+        <div class="ddSectionLabel">Your Events</div>
         <div id="dayNotesList"></div>
         <hr class="ddDivider">
       </div>
 
-      <div class="ddSectionLabel">Add Reminder / Event</div>
-      <input type="text" id="dayNewNoteText" placeholder="Reminder title (e.g., Doctor's Appointment)">
+      <div class="ddSectionLabel">Add Event</div>
+      <input type="text" id="dayNewNoteText" placeholder="Event title (e.g., Doctor's Appointment)">
+
+      <div class="ddNotifyRow">
+        <div class="ddNotifyLabel">🔁 Repeat every year (Hebrew calendar)</div>
+        <label class="toggleSwitch"><input type="checkbox" id="dayNewNoteRepeat"><span class="toggleSlider"></span></label>
+      </div>
 
       <div class="ddNotifyRow">
         <div class="ddNotifyLabel">🔔 Notify Me</div>
         <label class="toggleSwitch"><input type="checkbox" id="dayNewNoteNotify"><span class="toggleSlider"></span></label>
       </div>
-      <div id="dayNewNoteTimeWrap" class="hidden">
-        <label for="dayNewNoteTime">At what time:</label>
-        <input type="time" id="dayNewNoteTime" value="09:00">
+      <div id="dayNewNoteOptionsWrap" class="hidden">
+        <div class="ddNotifyTypeRow">
+          <button type="button" id="notifyTypeTimeBtn" class="ddSegBtn ddSegBtnActive">At a Time</button>
+          <button type="button" id="notifyTypeZmanBtn" class="ddSegBtn">Before a Zman</button>
+        </div>
+        <div id="dayNewNoteTimeWrap">
+          <label for="dayNewNoteTime">At what time:</label>
+          <input type="time" id="dayNewNoteTime" value="09:00">
+        </div>
+        <div id="dayNewNoteZmanWrap" class="hidden">
+          <label for="dayNewNoteZman">Before which zman:</label>
+          <select id="dayNewNoteZman"></select>
+          <div id="dayNewNoteOffsetRow">
+            <label>Hours before: <input type="number" id="dayNewNoteOffsetHours" min="0" max="23" value="0"></label>
+            <label>Minutes before: <input type="number" id="dayNewNoteOffsetMinutes" min="0" max="59" value="15"></label>
+          </div>
+        </div>
       </div>
 
       <hr class="ddDivider">
@@ -860,11 +893,11 @@
         <div id="printBtnWrap">
           <button id="printDayBtn" class="ddSecondaryBtn">🖨️ Print Day &amp; Zmanim</button>
           <div id="printConfirmRow" class="hidden">
-            <button id="printWithNotesBtn" class="ddTinyBtn">Yes, include reminders</button>
+            <button id="printWithNotesBtn" class="ddTinyBtn">Yes, include events</button>
             <button id="printNoNotesBtn" class="ddTinyBtn">Just zmanim</button>
           </div>
         </div>
-        <button id="dayAddNoteBtn" class="ddPrimaryBtn">Save Reminder</button>
+        <button id="dayAddNoteBtn" class="ddPrimaryBtn">Save Event</button>
       </div>
     </div>
   </div>
@@ -894,7 +927,7 @@
           <div class="userModeCard" data-mode="normal">
             <div class="userModeIcon">📅</div>
             <div class="userModeTitle">For Normal Calendar Use</div>
-            <div class="userModeDesc">Adds the full Luach calendar — week and month views, reminders, and everything else.</div>
+            <div class="userModeDesc">Adds the full Luach calendar — week and month views, events, and everything else.</div>
           </div>
         </div>
       </div>
@@ -931,7 +964,7 @@
       <div class="settingsSection">
         <div class="settingsSectionTitle">🔔 Notifications</div>
         <div class="settingsSectionDesc">
-          Get notified when a zman arrives, or when a reminder you added is
+          Get notified when a zman arrives, or when an event you added is
           due. Works best while the app is open or recently open — it may
           not fire if it's been fully closed a long time (especially on
           iPhone), since reliable delivery then needs a paid push server,
@@ -965,7 +998,7 @@
         <div class="settingsSectionDesc">
           Prints one full page per day (not a small monthly grid) — "This
           month" makes about 30 pages, each with every zman shown above and,
-          if you choose, that day's reminders.
+          if you choose, that day's events.
         </div>
         <div class="row">
           <select id="printRangeSelect">
@@ -982,7 +1015,7 @@
           <input type="number" id="printCustomMonths" min="1" max="60" placeholder="e.g. 8">
         </div>
         <div class="settingsRowCard">
-          <div class="settingsRowLabel"><div class="settingsRowEn">Include my reminders on each day's page</div></div>
+          <div class="settingsRowLabel"><div class="settingsRowEn">Include my events on each day's page</div></div>
           <label class="toggleSwitch"><input type="checkbox" id="printRangeIncludeNotes"><span class="toggleSlider"></span></label>
         </div>
         <button id="printBtn" style="width:100%; margin-top:6px;">🖨️ Print</button>
@@ -1252,23 +1285,87 @@ let cachedDayKey = null;
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 
-/* ===================== Personal reminders/notes (saved on this device) ===================== */
-function loadNotes(){ try { return JSON.parse(localStorage.getItem('zmanNotes') || '{}'); } catch(e){ return {}; } }
+/* ===================== Events (saved on this device) =====================
+   Two kinds of events live in separate stores:
+     - One-time: keyed by the exact Gregorian date ("2026-09-18")
+     - Repeating: keyed by Hebrew month+day ("Cheshvan-15") — so they recur
+       on that Hebrew date every Hebrew year, landing on a different
+       Gregorian date each time, the same way a Hebrew birthday works.
+   Notifications on an event can be either a fixed clock time, or a
+   number of hours/minutes before a chosen zman that day. */
+function loadNotes(){
+  try {
+    const raw = JSON.parse(localStorage.getItem('zmanNotes') || '{}');
+    if (raw.oneTime || raw.repeating) return { oneTime: raw.oneTime || {}, repeating: raw.repeating || {} };
+    return { oneTime: raw, repeating: {} }; // migrate old flat format from before "Events" existed
+  } catch(e){ return { oneTime: {}, repeating: {} }; }
+}
 function saveNotes(n){ try { localStorage.setItem('zmanNotes', JSON.stringify(n)); } catch(e){} }
 let allNotes = loadNotes();
 function dateKey(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
-function notesFor(key){ return allNotes[key] || []; }
-function addNoteFor(key, text, notify, time){
+function hebKeyFor(y,m,d){
+  const jdn = HebrewEngine.gregorianToJDN(y,m,d);
+  const hd = HebrewEngine.jdnToHebrew(jdn);
+  return `${hd.monthName}-${hd.day}`;
+}
+function notesFor(y,m,d){
+  const oneTime = allNotes.oneTime[dateKey(y,m,d)] || [];
+  const repeating = allNotes.repeating[hebKeyFor(y,m,d)] || [];
+  return oneTime.concat(repeating);
+}
+function addNoteFor(y,m,d, text, notifyOpts, repeats){
   if (!text.trim()) return;
-  if (!allNotes[key]) allNotes[key] = [];
-  allNotes[key].push({ id: Date.now()+Math.random().toString(36).slice(2), text: text.trim(), notify: !!notify, time: notify ? time : null });
+  const entry = { id: Date.now()+Math.random().toString(36).slice(2), text: text.trim(), repeats: !!repeats, ...notifyOpts };
+  if (repeats) {
+    const hk = hebKeyFor(y,m,d);
+    if (!allNotes.repeating[hk]) allNotes.repeating[hk] = [];
+    allNotes.repeating[hk].push(entry);
+  } else {
+    const key = dateKey(y,m,d);
+    if (!allNotes.oneTime[key]) allNotes.oneTime[key] = [];
+    allNotes.oneTime[key].push(entry);
+  }
   saveNotes(allNotes);
 }
-function deleteNoteFor(key, id){
-  if (!allNotes[key]) return;
-  allNotes[key] = allNotes[key].filter(n => n.id !== id);
-  if (!allNotes[key].length) delete allNotes[key];
+function deleteNoteFor(y,m,d, id){
+  const key = dateKey(y,m,d), hk = hebKeyFor(y,m,d);
+  if (allNotes.oneTime[key]) {
+    allNotes.oneTime[key] = allNotes.oneTime[key].filter((n) => n.id !== id);
+    if (!allNotes.oneTime[key].length) delete allNotes.oneTime[key];
+  }
+  if (allNotes.repeating[hk]) {
+    allNotes.repeating[hk] = allNotes.repeating[hk].filter((n) => n.id !== id);
+    if (!allNotes.repeating[hk].length) delete allNotes.repeating[hk];
+  }
   saveNotes(allNotes);
+}
+// Given an event's notify settings and today's already-computed zmanim, returns
+// the trigger time in local minutes-since-midnight, or null if it shouldn't notify.
+function eventTriggerMinutes(n, zmanToday, state){
+  if (!n.notify) return null;
+  if (n.notifyType === 'beforeZman') {
+    if (!zmanToday) return null;
+    let z = zmanToday[n.zmanKey];
+    if (n.zmanKey === 'candle') z = state.erevSomething ? zmanToday.candle : zmanToday.shkiah;
+    if (n.zmanKey === 'havdalah') z = state.havdalahTonight ? zmanToday.havdalah : zmanToday.tzeisEveryday;
+    if (!z) return null;
+    return z.minutesLocal - ((n.offsetHours||0)*60 + (n.offsetMinutes||0));
+  }
+  if (n.time) { const [hh,mm] = n.time.split(':').map((x)=>parseInt(x,10)); return hh*60+mm; }
+  return null;
+}
+function eventNotifyLabel(n){
+  if (!n.notify) return '';
+  if (n.notifyType === 'beforeZman') {
+    const def = ZmanimEngine.ZMAN_DEFS[n.zmanKey];
+    const zmanLabel = def ? def.label : (n.zmanKey === 'candle' ? 'Sunset/Candle Lighting' : n.zmanKey === 'havdalah' ? 'Nightfall/Havdalah' : n.zmanKey);
+    const h = n.offsetHours||0, m = n.offsetMinutes||0;
+    const parts = [];
+    if (h) parts.push(`${h}h`);
+    if (m) parts.push(`${m}m`);
+    return `🔔 ${parts.join(' ') || '0m'} before ${zmanLabel}`;
+  }
+  return n.time ? `🔔 ${n.time}` : '';
 }
 function escapeHtml(s){ return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1438,8 +1535,7 @@ function renderOmer(state){
 }
 
 function renderTodayReminder(now){
-  const key = dateKey(now.getFullYear(), now.getMonth()+1, now.getDate());
-  const list = notesFor(key);
+  const list = notesFor(now.getFullYear(), now.getMonth()+1, now.getDate());
   if (list.length) {
     reminderLineEl.textContent = '📌 ' + list.map(n => n.text).join('  ·  ');
     reminderLineEl.classList.add('show');
@@ -1512,13 +1608,13 @@ function checkNotifications(now, state){
     if (active) fireIfDue('havdalah', active.minutesLocal, label, todayKey, nowMin);
   }
 
-  notesFor(todayKey).forEach((n) => {
-    if (!n.notify || !n.time) return;
+  const eventsToday = notesFor(now.getFullYear(), now.getMonth()+1, now.getDate());
+  eventsToday.forEach((n) => {
+    const triggerMin = eventTriggerMinutes(n, z, state);
+    if (triggerMin == null) return;
     const fireKey = todayKey + ':note:' + n.id;
     if (hasFired(todayKey, fireKey)) return;
-    const [hh, mm] = n.time.split(':').map((x) => parseInt(x, 10));
-    const noteMin = hh * 60 + mm;
-    if (nowMin >= noteMin && nowMin - noteMin < 2) { sendNotification('Reminder', n.text); markFired(todayKey, fireKey); }
+    if (nowMin >= triggerMin && nowMin - triggerMin < 2) { sendNotification('Event', n.text); markFired(todayKey, fireKey); }
   });
 }
 
@@ -1624,11 +1720,10 @@ function renderNormalHome(){
       `<div class="zChip ${r.highlight?'zChipHighlight':''}"><span>${r.label}</span><span class="zChipTime">${r.time}</span></div>`).join('');
   }
 
-  const key = dateKey(now.getFullYear(), now.getMonth()+1, now.getDate());
-  const list = notesFor(key);
+  const list = notesFor(now.getFullYear(), now.getMonth()+1, now.getDate());
   document.getElementById('nhRemindersCard').classList.toggle('hidden', list.length === 0);
   document.getElementById('nhRemindersList').innerHTML = list.map((n) =>
-    `<div class="noteRow"><div><div class="noteText">${escapeHtml(n.text)}</div>${n.notify ? `<div class="noteTime">🔔 ${n.time}</div>` : ''}</div></div>`).join('');
+    `<div class="noteRow"><div><div class="noteText">${escapeHtml(n.text)}${n.repeats ? ' 🔁' : ''}</div>${n.notify ? `<div class="noteTime">${eventNotifyLabel(n)}</div>` : ''}</div></div>`).join('');
 }
 document.getElementById('nhCalendarBtn').addEventListener('click', openCalendar);
 document.getElementById('nhSettingsBtn').addEventListener('click', openSettings);
@@ -1952,8 +2047,8 @@ function buildOneDayPage(y, m, d, includeNotes){
 
   let notesHtml = '';
   if (includeNotes) {
-    const list = notesFor(dateKey(y, m, d));
-    if (list.length) notesHtml = `<div class="pNoteBox"><strong>Reminders:</strong><br>${list.map((n) => escapeHtml(n.text) + (n.notify ? ` (${n.time})` : '')).join('<br>')}</div>`;
+    const list = notesFor(y, m, d);
+    if (list.length) notesHtml = `<div class="pNoteBox"><strong>Events:</strong><br>${list.map((n) => escapeHtml(n.text) + (n.repeats ? ' (yearly)' : '') + (n.notify ? ` (${eventNotifyLabel(n).replace('🔔 ','')})` : '')).join('<br>')}</div>`;
   }
 
   return `
@@ -2106,7 +2201,7 @@ function renderWeekView(){
       });
     }
     if (showReminders) {
-      notesFor(dateKey(y,m,day)).forEach((n) => { chips += `<div class="chip chipReminder">📌 ${escapeHtml(n.text)}</div>`; });
+      notesFor(y,m,day).forEach((n) => { chips += `<div class="chip chipReminder">📌 ${escapeHtml(n.text)}${n.repeats ? ' 🔁' : ''}</div>`; });
     }
 
     html += `<div class="weekDayCol ${isToday?'today':''}">
@@ -2115,7 +2210,7 @@ function renderWeekView(){
         <div class="weekHebDate">${hebDate.day} ${hebDate.monthName}</div>
       </div>
       <div class="weekChips">${chips}</div>
-      <button class="weekAddBtn" data-y="${y}" data-m="${m}" data-d="${day}">+ Add reminder</button>
+      <button class="weekAddBtn" data-y="${y}" data-m="${m}" data-d="${day}">+ Add event</button>
     </div>`;
   }
   const grid = document.getElementById('calWeekGrid');
@@ -2149,13 +2244,12 @@ function renderCalendarMonth(){
     if (showCandle) {
       const z = ZmanimEngine.getZmanimFull(jsDate, currentLat(), currentLon(), settings);
       if (z) {
-        if (dow === 5) zmanLine = `🕯 ${z.candle.text}`;
-        else if (dow === 6) zmanLine = `✦ ${z.havdalah.text}`;
+        if (dow === 5) zmanLine = `Candles: ${z.candle.text}`;
+        else if (dow === 6) zmanLine = `Havdalah: ${z.havdalah.text}`;
       }
     }
 
-    const key = dateKey(y, m, day);
-    const hasNote = showReminders && notesFor(key).length > 0;
+    const hasNote = showReminders && notesFor(y, m, day).length > 0;
 
     cells += `<div class="calDay ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}" data-y="${y}" data-m="${m}" data-d="${day}">
       <div class="calNum">${day}</div>
@@ -2271,28 +2365,33 @@ function openDayDetail(y, m, d){
   document.getElementById('dayDetailZmanim').innerHTML = rows.map((r) =>
     `<div class="zChip ${r.highlight?'zChipHighlight':''}"><span>${r.label}</span><span class="zChipTime">${r.time}</span></div>`).join('');
 
-  // reset the add-reminder form and print-confirm state each time it opens
-  document.getElementById('dayNewNoteText').value = '';
-  document.getElementById('dayNewNoteNotify').checked = false;
-  document.getElementById('dayNewNoteTimeWrap').classList.add('hidden');
+  // reset the add-event form and print-confirm state each time it opens
+  resetAddEventForm();
   document.getElementById('printDayBtn').classList.remove('hidden');
   document.getElementById('printConfirmRow').classList.add('hidden');
 
   renderDayNotes();
   document.getElementById('dayDetailModal').classList.add('show');
 }
+function populateZmanSelect(){
+  const sel = document.getElementById('dayNewNoteZman');
+  const opts = ZMAN_ORDER.map((k) => `<option value="${k}">${ZmanimEngine.ZMAN_DEFS[k].label}</option>`).join('');
+  sel.innerHTML = opts +
+    `<option value="candle">Sunset / Candle Lighting</option><option value="havdalah">Nightfall / Havdalah</option>`;
+}
+populateZmanSelect();
+
 function renderDayNotes(){
-  const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
-  const list = notesFor(key);
+  const list = notesFor(dayDetailY, dayDetailM, dayDetailD);
   document.getElementById('ddExistingNotesWrap').classList.toggle('hidden', list.length === 0);
   document.getElementById('dayNotesList').innerHTML = list.map((n) => `
     <div class="noteRow" data-id="${n.id}">
-      <div><div class="noteText">${escapeHtml(n.text)}</div>${n.notify ? `<div class="noteTime">🔔 ${n.time}</div>` : ''}</div>
+      <div><div class="noteText">${escapeHtml(n.text)}${n.repeats ? ' 🔁' : ''}</div>${n.notify ? `<div class="noteTime">${eventNotifyLabel(n)}</div>` : ''}</div>
       <button class="noteDelBtn" data-id="${n.id}">✕</button>
     </div>`).join('');
   document.getElementById('dayNotesList').querySelectorAll('.noteDelBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      deleteNoteFor(key, btn.getAttribute('data-id'));
+      deleteNoteFor(dayDetailY, dayDetailM, dayDetailD, btn.getAttribute('data-id'));
       renderDayNotes(); renderCalendarMonth();
       const today = new Date();
       if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) { renderTodayReminder(today); renderNormalHome(); }
@@ -2300,14 +2399,47 @@ function renderDayNotes(){
   });
 }
 document.getElementById('dayNewNoteNotify').addEventListener('change', (e) => {
-  document.getElementById('dayNewNoteTimeWrap').classList.toggle('hidden', !e.target.checked);
+  document.getElementById('dayNewNoteOptionsWrap').classList.toggle('hidden', !e.target.checked);
 });
-document.getElementById('dayAddNoteBtn').addEventListener('click', () => {
-  const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
-  addNoteFor(key, document.getElementById('dayNewNoteText').value, document.getElementById('dayNewNoteNotify').checked, document.getElementById('dayNewNoteTime').value);
-  document.getElementById('dayNewNoteText').value = '';
-  document.getElementById('dayNewNoteNotify').checked = false;
+let dayNewNoteType = 'time';
+document.getElementById('notifyTypeTimeBtn').addEventListener('click', () => {
+  dayNewNoteType = 'time';
+  document.getElementById('notifyTypeTimeBtn').classList.add('ddSegBtnActive');
+  document.getElementById('notifyTypeZmanBtn').classList.remove('ddSegBtnActive');
+  document.getElementById('dayNewNoteTimeWrap').classList.remove('hidden');
+  document.getElementById('dayNewNoteZmanWrap').classList.add('hidden');
+});
+document.getElementById('notifyTypeZmanBtn').addEventListener('click', () => {
+  dayNewNoteType = 'beforeZman';
+  document.getElementById('notifyTypeZmanBtn').classList.add('ddSegBtnActive');
+  document.getElementById('notifyTypeTimeBtn').classList.remove('ddSegBtnActive');
+  document.getElementById('dayNewNoteZmanWrap').classList.remove('hidden');
   document.getElementById('dayNewNoteTimeWrap').classList.add('hidden');
+});
+
+function resetAddEventForm(){
+  document.getElementById('dayNewNoteText').value = '';
+  document.getElementById('dayNewNoteRepeat').checked = false;
+  document.getElementById('dayNewNoteNotify').checked = false;
+  document.getElementById('dayNewNoteOptionsWrap').classList.add('hidden');
+  dayNewNoteType = 'time';
+  document.getElementById('notifyTypeTimeBtn').classList.add('ddSegBtnActive');
+  document.getElementById('notifyTypeZmanBtn').classList.remove('ddSegBtnActive');
+  document.getElementById('dayNewNoteTimeWrap').classList.remove('hidden');
+  document.getElementById('dayNewNoteZmanWrap').classList.add('hidden');
+}
+document.getElementById('dayAddNoteBtn').addEventListener('click', () => {
+  const notify = document.getElementById('dayNewNoteNotify').checked;
+  const repeats = document.getElementById('dayNewNoteRepeat').checked;
+  const notifyOpts = { notify, notifyType: dayNewNoteType };
+  if (notify && dayNewNoteType === 'time') notifyOpts.time = document.getElementById('dayNewNoteTime').value;
+  if (notify && dayNewNoteType === 'beforeZman') {
+    notifyOpts.zmanKey = document.getElementById('dayNewNoteZman').value;
+    notifyOpts.offsetHours = parseInt(document.getElementById('dayNewNoteOffsetHours').value, 10) || 0;
+    notifyOpts.offsetMinutes = parseInt(document.getElementById('dayNewNoteOffsetMinutes').value, 10) || 0;
+  }
+  addNoteFor(dayDetailY, dayDetailM, dayDetailD, document.getElementById('dayNewNoteText').value, notifyOpts, repeats);
+  resetAddEventForm();
   renderDayNotes(); renderCalendarMonth();
   const today = new Date();
   if (dayDetailY===today.getFullYear() && dayDetailM===today.getMonth()+1 && dayDetailD===today.getDate()) { renderTodayReminder(today); renderNormalHome(); }
@@ -2319,7 +2451,6 @@ document.getElementById('dayDetailModal').addEventListener('click', (e) => { if 
    checkbox that's always on screen — nothing extra to look at until it's
    actually relevant. */
 function printDayFinal(includeNotes){
-  const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
   const jdn = HebrewEngine.gregorianToJDN(dayDetailY, dayDetailM, dayDetailD);
   const hebDate = HebrewEngine.jdnToHebrew(jdn);
   const holiday = HebrewEngine.getHolidayForJdn(jdn, hebDate.year);
@@ -2328,8 +2459,8 @@ function printDayFinal(includeNotes){
 
   let notesHtml = '';
   if (includeNotes) {
-    const list = notesFor(key);
-    if (list.length) notesHtml = `<div class="pnote" style="border:1px solid #000; padding:10px; margin-top:14px; text-align:left;"><strong>Reminders:</strong><br>${list.map((n) => escapeHtml(n.text) + (n.notify ? ` (${n.time})` : '')).join('<br>')}</div>`;
+    const list = notesFor(dayDetailY, dayDetailM, dayDetailD);
+    if (list.length) notesHtml = `<div class="pnote" style="border:1px solid #000; padding:10px; margin-top:14px; text-align:left;"><strong>Events:</strong><br>${list.map((n) => escapeHtml(n.text) + (n.repeats ? ' (yearly)' : '') + (n.notify ? ` (${eventNotifyLabel(n).replace('🔔 ','')})` : '')).join('<br>')}</div>`;
   }
 
   document.getElementById('printArea').innerHTML = `
@@ -2342,8 +2473,7 @@ function printDayFinal(includeNotes){
   setTimeout(() => window.print(), 150);
 }
 document.getElementById('printDayBtn').addEventListener('click', () => {
-  const key = dateKey(dayDetailY, dayDetailM, dayDetailD);
-  if (notesFor(key).length === 0) { printDayFinal(false); return; } // nothing to ask about
+  if (notesFor(dayDetailY, dayDetailM, dayDetailD).length === 0) { printDayFinal(false); return; } // nothing to ask about
   document.getElementById('printDayBtn').classList.add('hidden');
   document.getElementById('printConfirmRow').classList.remove('hidden');
 });
