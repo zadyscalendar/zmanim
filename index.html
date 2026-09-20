@@ -285,6 +285,17 @@
   #nhHebDate{ margin-top:2px; font-size:16px; color:#333; }
 
   #nhZmanimGrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* ---------- Torah Learning (Sefaria API — online-enhanced, cached for offline reuse) ---------- */
+  .torahList{ display:flex; flex-direction:column; gap:6px; }
+  .torahRow{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    background:#eef0f3; border-radius:8px; padding:9px 12px; text-decoration:none; color:inherit;
+  }
+  .torahRow:hover{ background:#e5e8ec; }
+  .torahRowLabel{ font-size:12.5px; color:#8a8f98; font-weight:700; }
+  .torahRowValue{ font-size:14px; color:#222; font-weight:600; text-align:right; }
+  .torahEmpty{ font-size:13px; color:#999; font-style:italic; }
   #nhRemindersCard.hidden{ display:none; }
   #nhRemindersList .noteRow{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; margin-bottom:6px; background:#eef0f3; border-radius:8px; }
   #nhRemindersList .noteRow:last-child{ margin-bottom:0; }
@@ -800,6 +811,11 @@
       <div class="ddSectionLabel">Today's Events</div>
       <div id="nhRemindersList"></div>
     </div>
+
+    <div class="nhCard" id="nhTorahCard">
+      <div class="ddSectionLabel">📖 Today's Torah Learning</div>
+      <div id="nhTorahList" class="torahList"></div>
+    </div>
   </div>
   </div>
 </div>
@@ -866,6 +882,11 @@
     <div id="dayDetailBody">
       <div class="ddSectionLabel">Today's Zmanim</div>
       <div id="dayDetailZmanim"></div>
+
+      <hr class="ddDivider">
+
+      <div class="ddSectionLabel">📖 Torah Learning for This Day</div>
+      <div id="dayDetailTorahList" class="torahList"></div>
 
       <hr class="ddDivider">
 
@@ -1321,6 +1342,7 @@ const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','
 const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 let cachedDayState = null; // recomputed once per minute
+let nhTorahRenderedForKey = null; // guards the Torah Learning fetch to once per day, not every tick
 let cachedDayKey = null;
 
 function pad2(n){ return String(n).padStart(2,'0'); }
@@ -1408,6 +1430,53 @@ function eventNotifyLabel(n){
   return n.time ? `🔔 ${n.time}` : '';
 }
 function escapeHtml(s){ return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== Torah Learning (Sefaria Calendars API) =====================
+   Pulls the day's full learning schedule — Parashat Hashavua, Daf Yomi, Daily
+   Mishnah, Daily Rambam, 929, Halakhah Yomit, and everything else Sefaria's
+   calendar returns — whatever is available that day. This is the one part of
+   the app that genuinely needs the internet, since it's someone else's live
+   library, not something calculable offline like the zmanim. Once fetched for
+   a given date it's cached in localStorage, so it keeps showing correctly
+   offline afterward; if it's never been fetched and there's no connection,
+   the section just quietly says so instead of breaking anything else. */
+function loadTorahCache(){ try { return JSON.parse(localStorage.getItem('torahLearningCache') || '{}'); } catch(e){ return {}; } }
+function saveTorahCache(c){ try { localStorage.setItem('torahLearningCache', JSON.stringify(c)); } catch(e){} }
+let torahCache = loadTorahCache();
+
+async function fetchTorahLearning(y, m, d){
+  const key = dateKey(y, m, d);
+  if (torahCache[key]) return torahCache[key];
+  try {
+    const res = await fetch(`https://www.sefaria.org/api/calendars?diaspora=1&year=${y}&month=${m}&day=${d}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = (data.calendar_items || []).map((it) => ({
+      label: it.title && it.title.en, value: (it.displayValue && it.displayValue.en) || it.ref, url: it.url ? `https://www.sefaria.org/${it.url}` : null
+    })).filter((it) => it.label && it.value);
+    torahCache[key] = items;
+    // keep the cache from growing forever — only keep the last ~120 days fetched
+    const keys = Object.keys(torahCache);
+    if (keys.length > 120) delete torahCache[keys.sort()[0]];
+    saveTorahCache(torahCache);
+    return items;
+  } catch (e) { return null; } // offline, or Sefaria unreachable — fail quietly
+}
+function torahListHtml(items){
+  if (items === null) return '<div class="torahEmpty">Not available offline yet — this section needs an internet connection the first time for each day.</div>';
+  if (!items.length) return '<div class="torahEmpty">Nothing listed for this day.</div>';
+  return items.map((it) => {
+    const inner = `<span class="torahRowLabel">${escapeHtml(it.label)}</span><span class="torahRowValue">${escapeHtml(it.value)}</span>`;
+    return it.url ? `<a class="torahRow" href="${it.url}" target="_blank" rel="noopener">${inner}</a>` : `<div class="torahRow">${inner}</div>`;
+  }).join('');
+}
+async function renderTorahLearningInto(elId, y, m, d){
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = '<div class="torahEmpty">Loading…</div>';
+  const items = await fetchTorahLearning(y, m, d);
+  el.innerHTML = torahListHtml(items);
+}
 
 
 /* ----- Analog clock face (built once; hands updated every second) ----- */
@@ -1733,6 +1802,12 @@ function renderNormalHome(){
   let h12 = h % 12; if (h12 === 0) h12 = 12;
   document.getElementById('nhClock').textContent = `${h12}:${pad2(m)} ${h >= 12 ? 'PM' : 'AM'}`;
   document.getElementById('nhTopDate').textContent = `${DOW_NAMES[now.getDay()]}, ${MONTH_NAMES_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+  const todayKeyForTorah = dateKey(now.getFullYear(), now.getMonth()+1, now.getDate());
+  if (nhTorahRenderedForKey !== todayKeyForTorah) {
+    nhTorahRenderedForKey = todayKeyForTorah;
+    renderTorahLearningInto('nhTorahList', now.getFullYear(), now.getMonth()+1, now.getDate());
+  }
 
   if (!cachedDayState) return; // first computeDayState hasn't run yet
   const state = cachedDayState;
@@ -2458,6 +2533,8 @@ function openDayDetail(y, m, d){
     ? `${holiday.name}${holiday.totalDays>1 ? ' — Day '+holiday.dayNum+' of '+holiday.totalDays : ''}${omer ? ` · Omer: ${omer}` : ''}`
     : (omer ? `Omer: Day ${omer}` : '');
   document.getElementById('dayDetailHoliday').style.display = (holiday || omer) ? '' : 'none';
+
+  renderTorahLearningInto('dayDetailTorahList', y, m, d);
 
   const rows = dayDetailZmanRows(jsDate, holiday);
   document.getElementById('dayDetailZmanim').innerHTML = rows.map((r) =>
