@@ -471,6 +471,20 @@
   }
   #calendarBtn:active{ transform: scale(0.94); }
 
+  #donateBtn{
+    position:fixed; right: 2vw; bottom: calc(2vh + clamp(56px, 8vw, 76px) + 1.2vh);
+    width: clamp(48px, 6.5vw, 62px); height: clamp(48px, 6.5vw, 62px);
+    border-radius: 50%;
+    background: var(--panel); color: var(--fg);
+    border: 2px solid var(--line);
+    font-size: clamp(20px, 3vw, 28px);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    z-index: 40;
+    text-decoration:none;
+  }
+  #donateBtn:active{ transform: scale(0.94); }
+
   /* =====================================================================
      Calendar — redesigned as a real week/month calendar app (sidebar with
      a mini-month navigator and toggleable layers, colored event chips).
@@ -512,6 +526,7 @@
   .calTopBtn{
     font-size:14px; font-weight:700; padding:0.55em 0.9em;
     border-radius:9px; border:1px solid #e3e6ea; background:#fff; color:#161616; cursor:pointer;
+    display:inline-block; text-decoration:none;
   }
   .calTopBtn:hover{ background:#f2f4f7; }
 
@@ -705,7 +720,7 @@
   #printArea{ display:none; }
 
   @media print{
-    #gearBtn, #settingsPanel, #calendarBtn, #calendarModal, #dayDetailModal, #setupModal, #setupToast, #precisionInfoModal { display:none !important; }
+    #gearBtn, #settingsPanel, #calendarBtn, #donateBtn, #calendarModal, #dayDetailModal, #setupModal, #setupToast, #precisionInfoModal { display:none !important; }
     #app{ display:none !important; }
     body{ overflow:visible; background:#fff; color:#000; }
     #printArea{
@@ -759,6 +774,7 @@
     <div id="nhTopActions">
       <button id="nhCalendarBtn" class="calTopBtn">📅 Full Calendar</button>
       <button id="nhSettingsBtn" class="calTopBtn">⚙️ Settings</button>
+      <a id="nhDonateBtn" class="calTopBtn" href="https://ko-fi.com/zmanimapp" target="_blank" rel="noopener">💖 Support</a>
     </div>
   </div>
   <div id="nhScroll">
@@ -788,6 +804,7 @@
 
 <button id="gearBtn" aria-label="Settings">⚙️</button>
 <button id="calendarBtn" aria-label="Jewish Calendar">📅</button>
+<a id="donateBtn" href="https://ko-fi.com/zmanimapp" target="_blank" rel="noopener" aria-label="Support this app">💖</a>
 
 <div id="calendarModal">
   <div id="calendarCard">
@@ -1123,7 +1140,7 @@ const DEFAULTS = {
   candleLightingMinutes: 18, theme: 'auto', location: null, homeLocation: null, clockMode: 'digital',
   elevationMeters: 0, showSeconds: false, setupCompleted: false, userMode: 'elderly',
   zmanShow: { alos: true, misheyakir: false, netz: true, shma: true, tefila: true, chatzos: true, minchaGedolah: false, minchaKetana: true, plag: false },
-  zmanOpinion: { alos: '16.1', misheyakir: '11', netz: 'standard', shkiah: 'standard', tzeisEveryday: 'small', havdalah: 'rt72fixed' },
+  zmanOpinion: { alos: '16.1', misheyakir: '11', netz: 'standard', shkiah: 'standard', tzeisEveryday: 'rt72fixed', havdalah: 'rt72fixed' },
   hourSystemPerZman: { shma: 'GRA', tefila: 'GRA', minchaGedolah: 'GRA', minchaKetana: 'GRA', plag: 'GRA' },
   notifyZmanim: { alos:false, misheyakir:false, netz:false, shma:false, tefila:false, chatzos:false, minchaGedolah:false, minchaKetana:false, plag:false, candle:false, havdalah:false }
 };
@@ -1848,8 +1865,10 @@ function applyUserMode(){
   const isNormal = settings.userMode === 'normal';
   const calBtn = document.getElementById('calendarBtn');
   const gearBtnEl = document.getElementById('gearBtn');
+  const donateBtnEl = document.getElementById('donateBtn');
   if (calBtn) calBtn.style.display = isNormal ? 'none' : ''; // normal mode uses its own top-bar button instead
   if (gearBtnEl) gearBtnEl.style.display = isNormal ? 'none' : ''; // ditto for settings
+  if (donateBtnEl) donateBtnEl.style.display = isNormal ? 'none' : ''; // ditto for the donate link
   document.getElementById('app').style.display = isNormal ? 'none' : '';
   document.getElementById('normalHome').classList.toggle('show', isNormal);
   if (isNormal) renderNormalHome();
