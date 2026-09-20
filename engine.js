@@ -342,8 +342,10 @@ const ZmanimEngine = (function () {
       options: [
         { id: 'geonim', label: 'Geonim (~14–20 min / 4.37°)', degrees: 4.37 },
         { id: 'medium', label: '3 medium stars (~42 min / 7.083°)', degrees: 7.083 },
-        { id: 'small', label: '3 small stars (~50 min / 8.5°)', degrees: 8.5 }
-      ], default: 'small' },
+        { id: 'small', label: '3 small stars (~50 min / 8.5°)', degrees: 8.5 },
+        { id: 'fixed50', label: '50 fixed minutes (Rav Moshe Feinstein, NY)', fixedMinutes: 50 },
+        { id: 'rt72fixed', label: 'Rabbeinu Tam — 72 fixed minutes (Satmar/Galician minhag)', fixedMinutes: 72 }
+      ], default: 'rt72fixed' },
     havdalah: { label: 'Havdalah (Motzei Shabbos/Yom Tov)', hebrew: 'הבדלה (מוצאי שבת/יו"ט)', kind: 'havdalah',
       options: [
         { id: 'small85', label: '3 small stars (8.5°)', degrees: 8.5 },
