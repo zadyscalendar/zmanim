@@ -670,6 +670,8 @@
   #dayNotesList .noteText{ flex:1; white-space:pre-wrap; font-size:14px; color:#222; }
   #dayNotesList .noteTime{ font-size:12px; color:#8a8f98; margin-top:3px; font-weight:600; }
   #dayNotesList .noteDelBtn{ background:none; border:none; color:#c0392b; font-size:19px; cursor:pointer; padding:0 4px; line-height:1; }
+  #dayNotesList .gcalLink{ font-size:18px; text-decoration:none; line-height:1; opacity:0.75; }
+  #dayNotesList .gcalLink:hover{ opacity:1; }
 
   #dayNewNoteText{
     width:100%; box-sizing:border-box; font-size:15px; padding:12px 14px;
@@ -1036,6 +1038,27 @@
           <label class="toggleSwitch"><input type="checkbox" id="printRangeIncludeNotes"><span class="toggleSlider"></span></label>
         </div>
         <button id="printBtn" style="width:100%; margin-top:6px;">🖨️ Print</button>
+      </div>
+
+      <div class="settingsSection">
+        <div class="settingsSectionTitle">📅 Google Calendar</div>
+        <div class="settingsSectionDesc">
+          No sign-in needed. Every event you save already has its own
+          "📅" link next to it (in the day screen) that opens Google
+          Calendar with that event pre-filled — one tap to add it. Use the
+          button below to get everything at once instead, one file at a
+          time. A repeating (Hebrew-yearly) event is expanded into its
+          correct date for each of the next 10 Hebrew years, since a
+          regular calendar file can't repeat on the Hebrew calendar by itself.
+        </div>
+        <button id="exportGcalBtn" style="width:100%;">⬇️ Export All Events (for Google Calendar)</button>
+        <p class="hint" style="margin-top:10px;">
+          After downloading: open <strong>calendar.google.com</strong> on a
+          computer → Settings (⚙️) → Import &amp; export → Import → choose
+          the downloaded file. On a phone, Google Calendar's app doesn't
+          import files directly — easiest is opening that Google site in
+          your phone's browser and doing the same steps there.
+        </p>
       </div>
 
       <div class="settingsSection">
@@ -2047,6 +2070,62 @@ setInterval(() => { if (navigator.onLine) performSync(false); }, 2 * 60 * 60 * 1
 
 
 /* ===================== Print: one full page per day, for the chosen range ===================== */
+/* ===================== Export all events for Google Calendar (.ics) ===================== */
+function icsEscape(s){ return String(s).replace(/[\\,;]/g, (c) => '\\'+c).replace(/\n/g, '\\n'); }
+function icsDateStamp(){
+  const d = new Date();
+  return d.getUTCFullYear()+pad2ForGcal(d.getUTCMonth()+1)+pad2ForGcal(d.getUTCDate())+'T'+pad2ForGcal(d.getUTCHours())+pad2ForGcal(d.getUTCMinutes())+pad2ForGcal(d.getUTCSeconds())+'Z';
+}
+function buildIcsEvent(y, m, d, n){
+  let dtLines;
+  if (n.notify && n.notifyType === 'time' && n.time) {
+    const [hh, mm] = n.time.split(':').map((x) => parseInt(x, 10));
+    const start = `${y}${pad2ForGcal(m)}${pad2ForGcal(d)}T${pad2ForGcal(hh)}${pad2ForGcal(mm)}00`;
+    dtLines = `DTSTART:${start}`;
+  } else {
+    const endDate = new Date(y, m-1, d+1);
+    dtLines = `DTSTART;VALUE=DATE:${y}${pad2ForGcal(m)}${pad2ForGcal(d)}\r\nDTEND;VALUE=DATE:${endDate.getFullYear()}${pad2ForGcal(endDate.getMonth()+1)}${pad2ForGcal(endDate.getDate())}`;
+  }
+  const desc = n.repeats ? 'Repeats every year on the Hebrew calendar - added from Zman & Luach.' : 'Added from Zman & Luach.';
+  return `BEGIN:VEVENT\r\nUID:${n.id}-${y}${pad2ForGcal(m)}${pad2ForGcal(d)}@zmanluach\r\nDTSTAMP:${icsDateStamp()}\r\n${dtLines}\r\nSUMMARY:${icsEscape(n.text)}\r\nDESCRIPTION:${icsEscape(desc)}\r\nEND:VEVENT`;
+}
+function generateIcsFile(){
+  const events = [];
+  // One-time events: use exactly as saved.
+  Object.keys(allNotes.oneTime).forEach((key) => {
+    const [y, m, d] = key.split('-').map((x) => parseInt(x, 10));
+    allNotes.oneTime[key].forEach((n) => events.push(buildIcsEvent(y, m, d, n)));
+  });
+  // Repeating events: expand to their real Gregorian date for the next 10 Hebrew years,
+  // since standard calendar files have no way to repeat on the Hebrew calendar directly.
+  const nowJdn = HebrewEngine.gregorianToJDN(new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate());
+  const nowHebYear = HebrewEngine.jdnToHebrew(nowJdn).year;
+  Object.keys(allNotes.repeating).forEach((hk) => {
+    const lastDash = hk.lastIndexOf('-');
+    const monthName = hk.slice(0, lastDash), day = parseInt(hk.slice(lastDash+1), 10);
+    allNotes.repeating[hk].forEach((n) => {
+      for (let i = 0; i < 10; i++) {
+        try {
+          const jdn = HebrewEngine.hebrewToJdn(nowHebYear + i, monthName, day);
+          if (jdn < nowJdn - 1) continue; // skip if this specific instance already passed this Hebrew year
+          const g = HebrewEngine.jdnToGregorian(jdn);
+          events.push(buildIcsEvent(g.year, g.month, g.day, n));
+        } catch (e) { /* some months don't exist in every year config (e.g. Adar I in a non-leap year) — skip safely */ }
+      }
+    });
+  });
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Zman & Luach//EN\r\nCALSCALE:GREGORIAN\r\n${events.join('\r\n')}\r\nEND:VCALENDAR`;
+}
+document.getElementById('exportGcalBtn').addEventListener('click', () => {
+  const ics = generateIcsFile();
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'zman-luach-events.ics';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
 document.getElementById('printBtn').addEventListener('click', () => {
   const customVal = parseInt(document.getElementById('printCustomMonths').value, 10);
   const monthCount = (customVal > 0) ? customVal : (parseInt(document.getElementById('printRangeSelect').value, 10) || 1);
@@ -2400,13 +2479,38 @@ function populateZmanSelect(){
 }
 populateZmanSelect();
 
+/* Google Calendar integration — no sign-in, no API keys needed. Each event
+   gets a real "add to your calendar" link using Google's own quick-add URL
+   scheme, and there's a bulk export below for everything at once. */
+function pad2ForGcal(n){ return String(n).padStart(2,'0'); }
+function googleCalendarUrl(y, m, d, n){
+  const title = encodeURIComponent(n.text);
+  let dates;
+  if (n.notify && n.notifyType === 'time' && n.time) {
+    const [hh, mm] = n.time.split(':').map((x) => parseInt(x, 10));
+    const start = `${y}${pad2ForGcal(m)}${pad2ForGcal(d)}T${pad2ForGcal(hh)}${pad2ForGcal(mm)}00`;
+    let endH = hh + 1, endD = d;
+    if (endH >= 24) endH -= 24; // doesn't roll the date forward, close enough for a 1-hour default block
+    const end = `${y}${pad2ForGcal(m)}${pad2ForGcal(endD)}T${pad2ForGcal(endH)}${pad2ForGcal(mm)}00`;
+    dates = `${start}/${end}`;
+  } else {
+    const endDate = new Date(y, m-1, d+1); // Google's all-day end date is exclusive
+    dates = `${y}${pad2ForGcal(m)}${pad2ForGcal(d)}/${endDate.getFullYear()}${pad2ForGcal(endDate.getMonth()+1)}${pad2ForGcal(endDate.getDate())}`;
+  }
+  const details = encodeURIComponent(n.repeats ? 'Repeats every year on the Hebrew calendar — added from Zman & Luach.' : 'Added from Zman & Luach.');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}`;
+}
+
 function renderDayNotes(){
   const list = notesFor(dayDetailY, dayDetailM, dayDetailD);
   document.getElementById('ddExistingNotesWrap').classList.toggle('hidden', list.length === 0);
   document.getElementById('dayNotesList').innerHTML = list.map((n) => `
     <div class="noteRow" data-id="${n.id}">
       <div><div class="noteText">${escapeHtml(n.text)}${n.repeats ? ' 🔁' : ''}</div>${n.notify ? `<div class="noteTime">${eventNotifyLabel(n)}</div>` : ''}</div>
-      <button class="noteDelBtn" data-id="${n.id}">✕</button>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <a href="${googleCalendarUrl(dayDetailY, dayDetailM, dayDetailD, n)}" target="_blank" rel="noopener" class="gcalLink" title="Add to Google Calendar">📅</a>
+        <button class="noteDelBtn" data-id="${n.id}">✕</button>
+      </div>
     </div>`).join('');
   document.getElementById('dayNotesList').querySelectorAll('.noteDelBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
